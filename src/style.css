@@ -926,3 +926,5 @@ table {
 td:first-child {
   min-width: 150px;
 }
+
+.presentation{max-width:1200px;margin:auto;padding:0 24px}.presentation-nav{display:flex;justify-content:space-between;align-items:center;padding:28px 0;border-bottom:1px solid #dce5df}.presentation-hero{padding:64px 0 40px;max-width:870px}.presentation-hero h1{font-size:clamp(2rem,5vw,3.6rem);line-height:1.12;letter-spacing:-.035em}.presentation-hero>p{max-width:670px;font-size:1.1rem;line-height:1.65}.presentation-hero .primary{display:inline-block;text-decoration:none;margin:12px 0}.presentation-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.presentation-security{margin-top:24px}.presentation footer{padding:28px 0}.saved-split{padding:20px 0;border-bottom:1px solid #dce5df}#automatic-backups{margin:20px 0}@media(max-width:760px){.presentation-grid{grid-template-columns:1fr}.presentation-hero{padding-top:32px}.presentation-nav{gap:20px;flex-wrap:wrap}}

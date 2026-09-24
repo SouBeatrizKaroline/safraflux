@@ -8,6 +8,13 @@
       "when": 1790251723274,
       "tag": "0000_friendly_hitman",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790276619022,
+      "tag": "0001_lumpy_franklin_storm",
+      "breakpoints": true
     }
   ]
 }

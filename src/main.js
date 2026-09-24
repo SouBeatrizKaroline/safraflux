@@ -26,21 +26,47 @@ import {
 } from "./chains.js";
 
 const KEY = "safraflux-v1";
-let state={wallets:[],invoices:[],producers:[],lots:[],splits:[],endpoints:{}}, revision=0, ready=false, loadError="";
-let legacyBackup=null;
-try { legacyBackup=localStorage.getItem(KEY); state.endpoints=JSON.parse(localStorage.getItem('safraflux-rpc')||'{}'); } catch {}
+let state = {
+    wallets: [],
+    invoices: [],
+    producers: [],
+    lots: [],
+    splits: [],
+    endpoints: {},
+  },
+  revision = 0,
+  ready = false,
+  loadError = "";
+let legacyBackup = null;
+try {
+  legacyBackup = localStorage.getItem(KEY);
+  state.endpoints = JSON.parse(localStorage.getItem("safraflux-rpc") || "{}");
+} catch {}
 async function loadRemote() {
-  const result=await api('state');
-  const endpoints=state.endpoints;
-  state={...result.state,endpoints};revision=result.revision;ready=true;
+  const result = await api("state");
+  const endpoints = state.endpoints;
+  state = { ...result.state, endpoints };
+  revision = result.revision;
+  ready = true;
 }
-async function mutate(action,payload) {
-  if(!ready)throw new Error('Carregue os registros antes de salvar.');
-  let result;try {result=await api('action',{revision,action,payload});}catch(error){if(error.status===409)error.message+=' Seus campos foram preservados; exporte ou copie o rascunho antes de atualizar.';throw error;}
-  const endpoints=state.endpoints;
-  const cached=new Map(state.wallets.map(w=>[w.id,{balance:w.balance,error:w.error}]));
-  state={...result.state,endpoints};revision=result.revision;
-  for(const w of state.wallets)Object.assign(w,cached.get(w.id)||{});
+async function mutate(action, payload) {
+  if (!ready) throw new Error("Carregue os registros antes de salvar.");
+  let result;
+  try {
+    result = await api("action", { revision, action, payload });
+  } catch (error) {
+    if (error.status === 409)
+      error.message +=
+        " Seus campos foram preservados; exporte ou copie o rascunho antes de atualizar.";
+    throw error;
+  }
+  const endpoints = state.endpoints;
+  const cached = new Map(
+    state.wallets.map((w) => [w.id, { balance: w.balance, error: w.error }]),
+  );
+  state = { ...result.state, endpoints };
+  revision = result.revision;
+  for (const w of state.wallets) Object.assign(w, cached.get(w.id) || {});
 }
 let view = "overview";
 let activeInvoice = null;
@@ -61,7 +87,8 @@ const when = (iso) =>
     dateStyle: "short",
     timeStyle: "short",
   });
-const save = () => localStorage.setItem('safraflux-rpc',JSON.stringify(state.endpoints));
+const save = () =>
+  localStorage.setItem("safraflux-rpc", JSON.stringify(state.endpoints));
 const chainOptions = (solanaOnly = false) =>
   Object.entries(CHAINS)
     .filter(([, c]) => !solanaOnly || c.family === "solana")
@@ -109,6 +136,11 @@ function navigate(next) {
 }
 
 function render() {
+  if (!["/app", "/app/"].includes(window.location.pathname)) {
+    renderPresentation();
+    return;
+  }
+
   const menu = [
     ["overview", "Visão geral", "01"],
     ["wallets", "Carteiras", "02"],
@@ -120,7 +152,7 @@ function render() {
     ["history", "Histórico", "08"],
   ];
   $("#app").innerHTML =
-    `<a class="skip" href="#content">Pular para o conteúdo</a><aside class="sidebar"><a class="brand" href="#" aria-label="SafraFlux início"><span class="brand-mark">S</span>SafraFlux<span class="beta">LAB</span></a><div class="workspace-label">OPERAÇÃO AGRÍCOLA</div><nav aria-label="Principal">${menu.map(([id, label, n]) => `<button class="nav ${view === id ? "active" : ""}" data-nav="${id}" ${view === id ? 'aria-current="page"' : ""}><span>${n}</span>${label}</button>`).join("")}</nav><div class="sidebar-bottom"><span class="network-mark">◎</span><div>Solana primeiro<small>Conectado ao campo.</small></div></div></aside><div class="page"><header class="topbar"><span>COOPERATIVAS & EXPORTADORES <span class="slash">/</span> CAFÉ</span><a href="https://github.com/SouBeatrizKaroline/safraflux" target="_blank" rel="noreferrer">Projeto aberto ↗</a></header><main id="content" tabindex="-1"><div id="notice" class="notice" role="status" aria-live="polite" hidden></div>${!ready ? '<p class="notice error">Conectando ao armazenamento. Os dados ainda não foram carregados.</p>' : ''}${{ overview: overview, wallets: walletsView, invoices: invoicesView, split: splitView, research: researchView, settings: settingsView, operations: operationsView, history: historyView }[view]()}</main><footer>Registros protegidos por conta e salvos no servidor. <strong>Não há custódia nem repasse automático.</strong></footer></div><dialog id="dialog"><div id="dialog-content"></div><button class="dialog-close secondary" id="close-dialog">Fechar</button></dialog>`;
+    `<a class="skip" href="#content">Pular para o conteúdo</a><aside class="sidebar"><a class="brand" href="#" aria-label="SafraFlux início"><span class="brand-mark">S</span>SafraFlux<span class="beta">LAB</span></a><div class="workspace-label">OPERAÇÃO AGRÍCOLA</div><nav aria-label="Principal">${menu.map(([id, label, n]) => `<button class="nav ${view === id ? "active" : ""}" data-nav="${id}" ${view === id ? 'aria-current="page"' : ""}><span>${n}</span>${label}</button>`).join("")}</nav><div class="sidebar-bottom"><span class="network-mark">◎</span><div>Solana primeiro<small>Conectado ao campo.</small></div></div></aside><div class="page"><header class="topbar"><span>COOPERATIVAS & EXPORTADORES <span class="slash">/</span> CAFÉ</span><div><a href="/">Sobre o SafraFlux</a> · <a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sair da conta</a></div></header><main id="content" tabindex="-1"><div id="notice" class="notice" role="status" aria-live="polite" hidden></div>${!ready ? '<p class="notice error">Conectando ao armazenamento. Os dados ainda não foram carregados.</p>' : ""}${{ overview: overview, wallets: walletsView, invoices: invoicesView, split: splitView, research: researchView, settings: settingsView, operations: operationsView, history: historyView }[view]()}</main><footer>Registros protegidos por conta e salvos no servidor. <strong>Não há custódia nem repasse automático.</strong></footer></div><dialog id="dialog"><div id="dialog-content"></div><button class="dialog-close secondary" id="close-dialog">Fechar</button></dialog>`;
   document
     .querySelectorAll("[data-nav]")
     .forEach((b) => b.addEventListener("click", () => navigate(b.dataset.nav)));
@@ -135,6 +167,19 @@ function render() {
     loadError = "";
   }
 }
+function renderPresentation() {
+  $("#app").innerHTML =
+    '<div class="presentation"><header class="presentation-nav"><a class="brand" href="/">SafraFlux</a><a href="https://github.com/SouBeatrizKaroline/safraflux" target="_blank" rel="noreferrer">Código e pesquisa ↗</a></header><main><div id="notice" class="notice" role="status" hidden></div><section class="presentation-hero"><div class="eyebrow">CAFÉ · OPERAÇÃO AGRÍCOLA · SOLANA</div><h1>Do lote ao recebimento.<br>Do recebimento ao produtor.</h1><p>Organize lotes, acompanhe carteiras e registre como cada valor é distribuído entre os produtores.</p><a class="primary" href="' +
+    (ready ? "/app" : "/signin-with-chatgpt?return_to=%2Fapp") +
+    '" target="_top">' +
+    (ready ? "Abrir minha operação" : "Entrar com ChatGPT") +
+    '</a><p class="subtle">' +
+    (ready
+      ? "Sua sessão está conectada. Os registros são privados por conta."
+      : "O acesso usa a autenticação do ChatGPT. A versão atual está restrita aos visitantes autorizados.") +
+    '</p></section><section class="presentation-grid"><article class="panel"><div class="eyebrow">01 · ORGANIZAR</div><h2>Produção com contexto</h2><p>Cadastre produtores, produto, safra e quantidade. Acompanhe o lote até a entrega com histórico das etapas declaradas.</p></article><article class="panel"><div class="eyebrow">02 · CONFERIR</div><h2>Carteiras em um só lugar</h2><p>Consulte Solana, Base, Ethereum e Arbitrum. Crie cobranças Solana Pay e confira entradas em USDC pela referência do lote.</p></article><article class="panel"><div class="eyebrow">03 · DISTRIBUIR</div><h2>Rateio explicado</h2><p>Calcule a participação por quantidade e prêmio de qualidade. Salve versões e exporte a memória de cálculo.</p></article></section><section class="panel presentation-security"><h2>Seus registros, sob controle</h2><p>Acesso autenticado, dados separados por conta, histórico e cópias automáticas das últimas 20 gravações. O SafraFlux não solicita sua frase de recuperação nem guarda chaves de carteira.</p><p>O cálculo de rateio não executa repasses. Informações de produção e entrega são declaradas pela operação. A validação completa de pagamentos com carteira externa e a revisão independente de segurança ainda estão pendentes.</p></section></main><footer>SafraFlux · Projeto aberto para a operação agrícola. <a href="https://github.com/SouBeatrizKaroline/safraflux/blob/main/SECURITY.md" target="_blank" rel="noreferrer">Segurança e limites</a></footer></div>';
+}
+
 function heading(eyebrow, title, description, action = "") {
   return `<div class="page-heading"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p>${description}</p></div>${action}</div>`;
 }
@@ -171,37 +216,301 @@ function invoicesView() {
   return `${heading("CONCILIAÇÃO", "Lotes e cobranças", "Uma referência por cobrança. Cada entrada conferida na rede.")}<section class="panel"><h2>Nova cobrança em USDC</h2><form id="invoice-form" class="grid-form"><label>Identificação do lote<input name="lot" placeholder="Ex.: CAF-2026-014" maxlength="60" required></label><label>Valor em USDC<input name="amount" inputmode="decimal" placeholder="Ex.: 1250,50" required></label><label>Rede<select name="chain">${chainOptions(true)}</select></label><label>Carteira de recebimento<input name="recipient" placeholder="Endereço público Solana" required></label><label class="wide">Referência interna do contrato (opcional)<input name="contract" maxlength="80" placeholder="Use um código; não inclua dados pessoais"></label><p class="form-note wide">A cobrança é salva na sua conta e gera um pedido Solana Pay. O recebimento só muda de status após consulta de uma transação finalizada. A entrega do café deve ser comprovada fora da blockchain.</p><button class="primary">Criar cobrança</button></form></section><section class="panel"><div class="section-title"><h2>Cobranças cadastradas</h2><button class="text-button" id="export-invoices">Exportar CSV ↓</button></div>${invoiceList()}</section>`;
 }
 function splitView() {
-  return `${heading("MEMÓRIA DE CÁLCULO", "Rateio por produtor", "Distribua o valor-base por quantidade e o prêmio por quantidade × pontos.")}<section class="panel"><div class="section-title"><h2>Dados do rateio</h2><button class="text-button" id="fill-example">Preencher exemplo fictício</button></div><form id="split-form"><div class="form-row"><label>Origem do valor<select name="source" id="split-source"><option value="manual">Valor informado manualmente</option>${state.invoices.map((i) => `<option value="${i.id}">${esc(i.lot)} · recebido ${invoiceStatus(i).received} USDC${CHAINS[i.chain].test ? " de teste" : ""}</option>`).join("")}</select></label><label>Valor a distribuir (USDC)<input name="total" inputmode="decimal" required placeholder="0,00"></label><label>Parte destinada ao prêmio (%)<input name="premium" inputmode="decimal" value="0" required></label></div><label>Produtores, um por linha: código; quantidade em kg; pontos de qualidade<textarea name="producers" rows="6" placeholder="PROD-01; 600; 80&#10;PROD-02; 400; 90" required></textarea></label><div class="split-explainer"><strong>Critério transparente</strong><p>O valor-base segue a participação em kg. O prêmio segue kg × pontos (0 a 100), definidos no contrato. Pontos são informações declaradas, sem certificação automática. O arredondamento preserva o total até a sexta casa decimal.</p></div><button class="primary">Calcular rateio</button><span id="split-mode" class="subtle">Cálculo local. Nenhum pagamento será enviado.</span></form><div id="split-result" aria-live="polite"></div></section>`;
+  return `${heading("MEMÓRIA DE CÁLCULO", "Rateio por produtor", "Distribua o valor-base por quantidade e o prêmio por quantidade × pontos.")}<section class="panel"><div class="section-title"><h2>Dados do rateio</h2><button class="text-button" id="fill-example">Preencher exemplo fictício</button></div><form id="split-form"><div class="form-row"><label>Origem do valor<select name="source" id="split-source"><option value="manual">Valor informado manualmente</option>${state.invoices.map((i) => `<option value="${i.id}">${esc(i.lot)} · recebido ${invoiceStatus(i).received} USDC${CHAINS[i.chain].test ? " de teste" : ""}</option>`).join("")}</select></label><label>Valor a distribuir (USDC)<input name="total" inputmode="decimal" required placeholder="0,00"></label><label>Parte destinada ao prêmio (%)<input name="premium" inputmode="decimal" value="0" required></label></div><label>Produtores, um por linha: código; quantidade em kg; pontos de qualidade<textarea name="producers" rows="6" placeholder="PROD-01; 600; 80&#10;PROD-02; 400; 90" required></textarea></label><div class="split-explainer"><strong>Critério transparente</strong><p>O valor-base segue a participação em kg. O prêmio segue kg × pontos (0 a 100), definidos no contrato. Pontos são informações declaradas, sem certificação automática. O arredondamento preserva o total até a sexta casa decimal.</p></div><button class="primary">Calcular rateio</button><span id="split-mode" class="subtle">Confira o cálculo e salve a memória no servidor. Nenhum pagamento será enviado.</span></form><div id="split-result" aria-live="polite"></div></section>`;
 }
 
 function operationsView() {
-  const stages={cadastrado:'Cadastrado',beneficiamento:'Em beneficiamento',pronto:'Pronto para envio',expedido:'Expedido',entregue:'Entregue',cancelado:'Cancelado'};
-  const transitions={cadastrado:['beneficiamento','cancelado'],beneficiamento:['pronto','cancelado'],pronto:['expedido','cancelado'],expedido:['entregue'],entregue:[],cancelado:[]};
-  return heading('DO CAMPO AO REPASSE','Operação agrícola','Cadastros e etapas declaradas pela operação. A blockchain não certifica a entrega física.') +
-  '<div class="columns"><section class="panel"><h2>Cadastrar produtor</h2><form id="producer-form"><label>Código<input name="code" maxlength="60" required placeholder="PROD-01"></label><label>Nome de identificação<input name="name" maxlength="120" required></label><button class="primary">Salvar produtor</button></form></section><section class="panel"><h2>Cadastrar lote</h2><form id="lot-form"><label>Código do lote<input name="code" maxlength="60" required placeholder="CAF-2026-001"></label><label>Produto<input name="crop" maxlength="80" required placeholder="Café arábica"></label><label>Safra<input name="harvest" maxlength="30" required placeholder="2026/2027"></label><label>Quantidade (kg)<input name="kg" inputmode="decimal" required></label><button class="primary">Salvar lote</button></form></section></div>' +
-  '<section class="panel"><h2>Produtores cadastrados</h2>'+ (state.producers.length ? '<div class="table-wrap"><table><thead><tr><th>Código</th><th>Identificação</th><th>Situação</th></tr></thead><tbody>'+state.producers.map(p=>'<tr><td>'+esc(p.code)+'</td><td>'+esc(p.name)+'</td><td>'+(p.archived?'Arquivado':'Ativo <button class="text-button" data-archive-producer="'+p.id+'">Arquivar</button>')+'</td></tr>').join('')+'</tbody></table></div>':'<p>Nenhum produtor cadastrado.</p>')+'</section>' +
-  '<section class="panel"><h2>Lotes da operação</h2>'+(state.lots.length?'<div class="table-wrap"><table><thead><tr><th>Lote</th><th>Produto / safra</th><th>Kg</th><th>Etapa declarada</th><th>Ações</th></tr></thead><tbody>'+state.lots.map(l=>'<tr><td>'+esc(l.code)+'</td><td>'+esc(l.crop)+' / '+esc(l.harvest)+'</td><td>'+fmt(l.kg)+'</td><td>'+stages[l.status]+'</td><td>'+transitions[l.status].map(status=>'<button class="text-button" data-stage="'+status+'" data-lot="'+l.id+'">'+stages[status]+'</button>').join('')+'<button class="text-button" data-bill-lot="'+l.id+'">Criar cobrança</button></td></tr>').join('')+'</tbody></table></div>':'<p>Nenhum lote cadastrado.</p>')+'</section>' +
-  '<section class="panel"><h2>Rateios salvos</h2><p>Versões preservadas. Um rateio salvo não executa pagamentos.</p>'+(state.splits.length?state.splits.map(x=>'<article class="saved-split"><h3>'+esc(x.lot)+' · '+fmt(x.total)+' USDC</h3><p>'+esc(x.sourceLabel)+' · '+when(x.createdAt)+' · regra '+esc(x.rule)+'</p><button class="secondary" data-export-saved="'+x.id+'">Exportar memória CSV</button><div class="table-wrap"><table><thead><tr><th>Produtor</th><th>Kg</th><th>Base</th><th>Prêmio</th><th>Total USDC</th></tr></thead><tbody>'+x.rows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+fmt(r.kg)+'</td><td>'+fmt(r.base)+'</td><td>'+fmt(r.premium)+'</td><td>'+fmt(r.total)+'</td></tr>').join('')+'</tbody></table></div></article>').join(''):'<p>Calcule um rateio e escolha Salvar rateio no histórico.</p>')+'</section>';
+  const stages = {
+    cadastrado: "Cadastrado",
+    beneficiamento: "Em beneficiamento",
+    pronto: "Pronto para envio",
+    expedido: "Expedido",
+    entregue: "Entregue",
+    cancelado: "Cancelado",
+  };
+  const transitions = {
+    cadastrado: ["beneficiamento", "cancelado"],
+    beneficiamento: ["pronto", "cancelado"],
+    pronto: ["expedido", "cancelado"],
+    expedido: ["entregue"],
+    entregue: [],
+    cancelado: [],
+  };
+  return (
+    heading(
+      "DO CAMPO AO REPASSE",
+      "Operação agrícola",
+      "Cadastros e etapas declaradas pela operação. A blockchain não certifica a entrega física.",
+    ) +
+    '<div class="columns"><section class="panel"><h2>Cadastrar produtor</h2><form id="producer-form"><label>Código<input name="code" maxlength="60" required placeholder="PROD-01"></label><label>Nome de identificação<input name="name" maxlength="120" required></label><button class="primary">Salvar produtor</button></form></section><section class="panel"><h2>Cadastrar lote</h2><form id="lot-form"><label>Código do lote<input name="code" maxlength="60" required placeholder="CAF-2026-001"></label><label>Produto<input name="crop" maxlength="80" required placeholder="Café arábica"></label><label>Safra<input name="harvest" maxlength="30" required placeholder="2026/2027"></label><label>Quantidade (kg)<input name="kg" inputmode="decimal" required></label><button class="primary">Salvar lote</button></form></section></div>' +
+    '<section class="panel"><h2>Produtores cadastrados</h2>' +
+    (state.producers.length
+      ? '<div class="table-wrap"><table><thead><tr><th>Código</th><th>Identificação</th><th>Situação</th></tr></thead><tbody>' +
+        state.producers
+          .map(
+            (p) =>
+              "<tr><td>" +
+              esc(p.code) +
+              "</td><td>" +
+              esc(p.name) +
+              "</td><td>" +
+              (p.archived
+                ? "Arquivado"
+                : 'Ativo <button class="text-button" data-archive-producer="' +
+                  p.id +
+                  '">Arquivar</button>') +
+              "</td></tr>",
+          )
+          .join("") +
+        "</tbody></table></div>"
+      : "<p>Nenhum produtor cadastrado.</p>") +
+    "</section>" +
+    '<section class="panel"><h2>Lotes da operação</h2>' +
+    (state.lots.length
+      ? '<div class="table-wrap"><table><thead><tr><th>Lote</th><th>Produto / safra</th><th>Kg</th><th>Etapa declarada</th><th>Ações</th></tr></thead><tbody>' +
+        state.lots
+          .map(
+            (l) =>
+              "<tr><td>" +
+              esc(l.code) +
+              "</td><td>" +
+              esc(l.crop) +
+              " / " +
+              esc(l.harvest) +
+              "</td><td>" +
+              fmt(l.kg) +
+              "</td><td>" +
+              stages[l.status] +
+              "</td><td>" +
+              transitions[l.status]
+                .map(
+                  (status) =>
+                    '<button class="text-button" data-stage="' +
+                    status +
+                    '" data-lot="' +
+                    l.id +
+                    '">' +
+                    stages[status] +
+                    "</button>",
+                )
+                .join("") +
+              '<button class="text-button" data-bill-lot="' +
+              l.id +
+              '">Criar cobrança</button></td></tr>',
+          )
+          .join("") +
+        "</tbody></table></div>"
+      : "<p>Nenhum lote cadastrado.</p>") +
+    "</section>" +
+    '<section class="panel"><h2>Rateios salvos</h2><p>Versões preservadas. Um rateio salvo não executa pagamentos.</p>' +
+    (state.splits.length
+      ? state.splits
+          .map(
+            (x) =>
+              '<article class="saved-split"><h3>' +
+              esc(x.lot) +
+              " · " +
+              fmt(x.total) +
+              " USDC</h3><p>" +
+              esc(x.sourceLabel) +
+              " · " +
+              when(x.createdAt) +
+              " · regra " +
+              esc(x.rule) +
+              '</p><button class="secondary" data-export-saved="' +
+              x.id +
+              '">Exportar memória CSV</button><div class="table-wrap"><table><thead><tr><th>Produtor</th><th>Kg</th><th>Base</th><th>Prêmio</th><th>Total USDC</th></tr></thead><tbody>' +
+              x.rows
+                .map(
+                  (r) =>
+                    "<tr><td>" +
+                    esc(r.name) +
+                    "</td><td>" +
+                    fmt(r.kg) +
+                    "</td><td>" +
+                    fmt(r.base) +
+                    "</td><td>" +
+                    fmt(r.premium) +
+                    "</td><td>" +
+                    fmt(r.total) +
+                    "</td></tr>",
+                )
+                .join("") +
+              "</tbody></table></div></article>",
+          )
+          .join("")
+      : "<p>Calcule um rateio e escolha Salvar rateio no histórico.</p>") +
+    "</section>"
+  );
 }
 function historyView() {
-  return heading('REGISTRO DE ALTERAÇÕES','Histórico da conta','Cada gravação recebe uma revisão. O histórico não pode ser editado pela interface.')+'<section class="panel"><button id="load-history" class="primary">Consultar histórico</button><div id="history-results" aria-live="polite"></div></section>';
+  return (
+    heading(
+      "REGISTRO DE ALTERAÇÕES",
+      "Histórico da conta",
+      "Cada gravação recebe uma revisão. O histórico não pode ser editado pela interface.",
+    ) +
+    '<section class="panel"><button id="load-history" class="primary">Consultar histórico</button><div id="history-results" aria-live="polite"></div></section>'
+  );
 }
 function bindOperations() {
-  $('#reload-data')?.addEventListener('click',e=>run(e.target,async()=>{await loadRemote();render();notice('Dados atualizados do servidor.');}));
-  $('#migrate-local')?.addEventListener('click',e=>run(e.target,async()=>{
-    const data=JSON.parse(legacyBackup);await mutate('backup.import',{...data,version:1});legacyBackup=null;render();notice('Registros antigos importados. Pagamentos precisam de nova conferência. A cópia local original foi preservada.');
-  }));
-  for(const [selector,action] of [['#producer-form','producer.add'],['#lot-form','lot.add']])$(selector)?.addEventListener('submit',e=>{
-    e.preventDefault();const payload=Object.fromEntries(new FormData(e.target));run(e.submitter,async()=>{await mutate(action,payload);render();notice('Cadastro salvo no servidor.');});
-  });
-  document.querySelectorAll('[data-archive-producer]').forEach(b=>b.addEventListener('click',()=>run(b,async()=>{await mutate('producer.archive',{id:b.dataset.archiveProducer});render();})));
-  document.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>run(b,async()=>{await mutate('lot.status',{id:b.dataset.lot,status:b.dataset.stage});render();})));
-  document.querySelectorAll('[data-bill-lot]').forEach(b=>b.addEventListener('click',()=>{const lot=state.lots.find(l=>l.id===b.dataset.billLot);navigate('invoices');$('#invoice-form').elements.lot.value=lot.code;}));
-  document.querySelectorAll('[data-export-saved]').forEach(b=>b.addEventListener('click',()=>{const x=state.splits.find(s=>s.id===b.dataset.exportSaved);download('safraflux-rateio-'+x.id+'.csv',csv([['Lote',x.lot],['Origem',x.sourceLabel],['Regra',x.rule],['Data',x.createdAt],['Produtor','Kg','Pontos','Base USDC','Prêmio USDC','Total USDC'],...x.rows.map(r=>[r.name,r.kg,r.points,r.base,r.premium,r.total])]),'text/csv;charset=utf-8');}));
-  $('#load-history')?.addEventListener('click',e=>run(e.target,async()=>{
-    const labels={'wallet.add':'Carteira cadastrada','wallet.remove':'Carteira removida','invoice.add':'Cobrança criada','invoice.verify':'Recebimento verificado','backup.import':'Backup importado','producer.add':'Produtor cadastrado','producer.archive':'Produtor arquivado','lot.add':'Lote cadastrado','lot.status':'Etapa do lote alterada','split.save':'Rateio salvo'};
-    const result=await api('history');$('#history-results').innerHTML=result.events.length?'<div class="table-wrap"><table><thead><tr><th>Revisão</th><th>Operação</th><th>Data</th></tr></thead><tbody>'+result.events.map(x=>'<tr><td>'+x.revision+'</td><td>'+esc(labels[x.action]||x.action)+'</td><td>'+when(x.at)+'</td></tr>').join('')+'</tbody></table></div>':'<p>Nenhuma alteração registrada.</p>';
-  }));
+  $("#list-backups")?.addEventListener("click", (e) =>
+    run(e.target, async () => {
+      const result = await api("backups");
+      $("#automatic-backups").innerHTML =
+        "<p>Últimas 20 gravações. Recuperar reúne registros ausentes com os atuais; não desfaz alterações existentes nem aceita pagamentos sem conferir a rede.</p>" +
+        result.backups
+          .map(
+            (x) =>
+              "<p>Revisão " +
+              x.revision +
+              " · " +
+              when(x.at) +
+              ' <button class="secondary" data-restore-revision="' +
+              x.revision +
+              '">Recuperar registros desta cópia</button></p>',
+          )
+          .join("");
+      if (!result.backups.length)
+        $("#automatic-backups").innerHTML =
+          "<p>A primeira gravação criará uma cópia automática.</p>";
+      document.querySelectorAll("[data-restore-revision]").forEach((b) =>
+        b.addEventListener("click", () =>
+          run(b, async () => {
+            await mutate("backup.restore", {
+              revision: Number(b.dataset.restoreRevision),
+            });
+            render();
+            notice(
+              "Registros recuperados. As alterações atuais foram preservadas.",
+            );
+          }),
+        ),
+      );
+    }),
+  );
+  $("#reload-data")?.addEventListener("click", (e) =>
+    run(e.target, async () => {
+      await loadRemote();
+      render();
+      notice("Dados atualizados do servidor.");
+    }),
+  );
+  $("#migrate-local")?.addEventListener("click", (e) =>
+    run(e.target, async () => {
+      const data = JSON.parse(legacyBackup);
+      await mutate("backup.import", { ...data, version: 1 });
+      legacyBackup = null;
+      render();
+      notice(
+        "Registros antigos importados. Pagamentos precisam de nova conferência. A cópia local original foi preservada.",
+      );
+    }),
+  );
+  for (const [selector, action] of [
+    ["#producer-form", "producer.add"],
+    ["#lot-form", "lot.add"],
+  ])
+    $(selector)?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const payload = Object.fromEntries(new FormData(e.target));
+      run(e.submitter, async () => {
+        await mutate(action, payload);
+        render();
+        notice("Cadastro salvo no servidor.");
+      });
+    });
+  document.querySelectorAll("[data-archive-producer]").forEach((b) =>
+    b.addEventListener("click", () =>
+      run(b, async () => {
+        await mutate("producer.archive", { id: b.dataset.archiveProducer });
+        render();
+      }),
+    ),
+  );
+  document.querySelectorAll("[data-stage]").forEach((b) =>
+    b.addEventListener("click", () =>
+      run(b, async () => {
+        await mutate("lot.status", {
+          id: b.dataset.lot,
+          status: b.dataset.stage,
+        });
+        render();
+      }),
+    ),
+  );
+  document.querySelectorAll("[data-bill-lot]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const lot = state.lots.find((l) => l.id === b.dataset.billLot);
+      navigate("invoices");
+      $("#invoice-form").elements.lot.value = lot.code;
+    }),
+  );
+  document.querySelectorAll("[data-export-saved]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const x = state.splits.find((s) => s.id === b.dataset.exportSaved);
+      download(
+        "safraflux-rateio-" + x.id + ".csv",
+        csv([
+          ["Lote", x.lot],
+          ["Origem", x.sourceLabel],
+          ["Regra", x.rule],
+          ["Data", x.createdAt],
+          [
+            "Produtor",
+            "Kg",
+            "Pontos",
+            "Base USDC",
+            "Prêmio USDC",
+            "Total USDC",
+          ],
+          ...x.rows.map((r) => [
+            r.name,
+            r.kg,
+            r.points,
+            r.base,
+            r.premium,
+            r.total,
+          ]),
+        ]),
+        "text/csv;charset=utf-8",
+      );
+    }),
+  );
+  $("#load-history")?.addEventListener("click", (e) =>
+    run(e.target, async () => {
+      const labels = {
+        "wallet.add": "Carteira cadastrada",
+        "wallet.remove": "Carteira removida",
+        "invoice.add": "Cobrança criada",
+        "invoice.verify": "Recebimento verificado",
+        "backup.restore": "Cópia automática recuperada",
+        "backup.import": "Backup importado",
+        "producer.add": "Produtor cadastrado",
+        "producer.archive": "Produtor arquivado",
+        "lot.add": "Lote cadastrado",
+        "lot.status": "Etapa do lote alterada",
+        "split.save": "Rateio salvo",
+      };
+      const result = await api("history");
+      $("#history-results").innerHTML = result.events.length
+        ? '<div class="table-wrap"><table><thead><tr><th>Revisão</th><th>Operação</th><th>Data</th></tr></thead><tbody>' +
+          result.events
+            .map(
+              (x) =>
+                "<tr><td>" +
+                x.revision +
+                "</td><td>" +
+                esc(labels[x.action] || x.action) +
+                "</td><td>" +
+                when(x.at) +
+                "</td></tr>",
+            )
+            .join("") +
+          "</tbody></table></div>"
+        : "<p>Nenhuma alteração registrada.</p>";
+    }),
+  );
 }
 
 function researchView() {
@@ -217,7 +526,7 @@ function settingsView() {
     )
     .join(
       "",
-    )}<button class="primary">Salvar provedores</button></form></section><section class="panel"><h2>Seus registros</h2><button id="reload-data" class="secondary">Atualizar dados do servidor</button>${legacyBackup ? `<button id="migrate-local" class="secondary">Importar registros antigos deste navegador</button>` : ""}<p>Carteiras, cobranças, produtores, lotes e rateios ficam vinculados à sua conta no servidor. Exporte uma cópia privada regularmente. A exportação não inclui URLs de provedores.</p><button class="secondary" id="backup">Exportar registros JSON</button><label>Restaurar backup JSON<input id="restore-file" type="file" accept=".json,application/json"></label><p id="restore-preview" role="status"></p><button class="primary" id="restore-confirm" disabled>Importar registros validados</button><p class="subtle">Importe um backup para reunir registros neste navegador. Os pagamentos importados precisam de nova verificação na rede. Abra a aplicação em outro dispositivo com a mesma conta para acessar os registros.</p></section>`;
+    )}<button class="primary">Salvar provedores</button></form></section><section class="panel"><h2>Seus registros</h2><button id="reload-data" class="secondary">Atualizar dados do servidor</button>${legacyBackup ? `<button id="migrate-local" class="secondary">Importar registros antigos deste navegador</button>` : ""}<p>Carteiras, cobranças, produtores, lotes e rateios ficam vinculados à sua conta no servidor. Exporte uma cópia privada regularmente. A exportação não inclui URLs de provedores.</p><button class="secondary" id="backup">Exportar registros JSON</button><button class="secondary" id="list-backups">Consultar cópias automáticas</button><div id="automatic-backups" aria-live="polite"></div><label>Restaurar backup JSON<input id="restore-file" type="file" accept=".json,application/json"></label><p id="restore-preview" role="status"></p><button class="primary" id="restore-confirm" disabled>Importar registros validados</button><p class="subtle">Importe um backup para reunir registros nesta conta. Os pagamentos importados precisam de nova verificação na rede. Abra a aplicação em outro dispositivo com a mesma conta para acessar os registros.</p></section>`;
 }
 
 async function refreshWallet(id) {
@@ -231,8 +540,8 @@ async function refreshWallet(id) {
   }
   save();
 }
-async function addWallet(name,chain,address) {
-  await mutate('wallet.add',{name,chain,address});
+async function addWallet(name, chain, address) {
+  await mutate("wallet.add", { name, chain, address });
   return state.wallets.at(-1).id;
 }
 function bind() {
@@ -259,8 +568,10 @@ function bind() {
   );
   document.querySelectorAll("[data-remove-wallet]").forEach((b) =>
     b.addEventListener("click", () => {
-      run(b, async()=>{
-        await mutate('wallet.remove',{id:b.dataset.removeWallet});render();notice('Carteira removida do acompanhamento. Cobranças preservadas.');
+      run(b, async () => {
+        await mutate("wallet.remove", { id: b.dataset.removeWallet });
+        render();
+        notice("Carteira removida do acompanhamento. Cobranças preservadas.");
       });
     }),
   );
@@ -278,9 +589,10 @@ function bind() {
     e.preventDefault();
     run(e.submitter, async () => {
       const d = Object.fromEntries(new FormData(e.target));
-      await mutate('invoice.add',d);
-      const invoice=state.invoices[0];
-      render();await openInvoice(invoice.id);
+      await mutate("invoice.add", d);
+      const invoice = state.invoices[0];
+      render();
+      await openInvoice(invoice.id);
     });
   });
   document
@@ -365,7 +677,8 @@ function bind() {
       const source = state.invoices.find((i) => i.id === d.source);
       const total = source ? invoiceStatus(source).received : d.total;
       splitResult = {
-        producers, sourceId:d.source,
+        producers,
+        sourceId: d.source,
         rows: calculateSplit(total, producers, d.premium),
         total,
         source: source
@@ -375,10 +688,21 @@ function bind() {
       };
       $("#split-result").innerHTML =
         `<div class="section-title result-title"><div><div class="eyebrow">TOTAL PRESERVADO · ${fmt(total)} USDC</div><h2>Memória do rateio</h2></div><button id="save-split" class="primary">Salvar rateio no histórico</button><button id="export-split" class="secondary">Exportar CSV ↓</button></div><p class="subtle">${esc(splitResult.source)} · Prêmio: ${esc(d.premium)}% · Valores calculados; repasses não executados.</p><div class="table-wrap"><table><thead><tr><th>Produtor</th><th>Quantidade</th><th>Base USDC</th><th>Prêmio USDC</th><th>Total USDC</th></tr></thead><tbody>${splitResult.rows.map((r) => `<tr><td><strong>${esc(r.name)}</strong></td><td>${esc(r.kg)} kg</td><td>${fmt(r.base)}</td><td>${fmt(r.premium)}</td><td><strong>${fmt(r.total)}</strong></td></tr>`).join("")}</tbody></table></div>`;
-      $("#save-split").addEventListener('click',event=>run(event.target,async()=>{
-        await mutate('split.save',{lot:source?.lot||'Avulso',source:splitResult.sourceId,total:splitResult.total,premium:splitResult.premium,producers:splitResult.producers});
-        render();notice('Rateio salvo com sua regra e memória de cálculo. Consulte Operação agrícola.');
-      }));
+      $("#save-split").addEventListener("click", (event) =>
+        run(event.target, async () => {
+          await mutate("split.save", {
+            lot: source?.lot || "Avulso",
+            source: splitResult.sourceId,
+            total: splitResult.total,
+            premium: splitResult.premium,
+            producers: splitResult.producers,
+          });
+          render();
+          notice(
+            "Rateio salvo com sua regra e memória de cálculo. Consulte Operação agrícola.",
+          );
+        }),
+      );
       $("#export-split").addEventListener("click", () =>
         download(
           "safraflux-rateio.csv",
@@ -446,13 +770,14 @@ function bind() {
         " assinatura(s) para conferir. Os registros atuais serão preservados.";
       $("#restore-confirm").disabled = false;
     } catch (error) {
-      if($("#restore-preview"))$("#restore-preview").textContent = error.message;
+      if ($("#restore-preview"))
+        $("#restore-preview").textContent = error.message;
     }
   });
   $("#restore-confirm")?.addEventListener("click", async () => {
     try {
       if (!pendingBackup) return;
-      await mutate("backup.import",JSON.parse(pendingBackup));
+      await mutate("backup.import", JSON.parse(pendingBackup));
       render();
       notice(
         "Backup importado. Abra as cobranças para conferir os pagamentos na rede.",
@@ -470,7 +795,9 @@ function bind() {
           exportedAt: new Date().toISOString(),
           wallets: state.wallets,
           invoices: state.invoices,
-          producers: state.producers, lots: state.lots, splits: state.splits,
+          producers: state.producers,
+          lots: state.lots,
+          splits: state.splits,
         },
         null,
         2,
@@ -554,8 +881,8 @@ async function openInvoice(id) {
             other.receipts.some((r) => r.signature === signature),
         )
       )
-        throw new Error("Esta transação já foi conciliada neste navegador.");
-      await mutate('invoice.verify',{id,signature});
+        throw new Error("Esta transação já foi conciliada nesta conta.");
+      await mutate("invoice.verify", { id, signature });
       $("#dialog").close();
       render();
       await openInvoice(id);
@@ -574,7 +901,15 @@ async function openInvoice(id) {
 }
 
 render();
-loadRemote().then(()=>render()).catch(error=>{ready=false;notice(error.message+' Use Atualizar dados do servidor em Configurações.',true);});
+loadRemote()
+  .then(() => render())
+  .catch((error) => {
+    ready = false;
+    notice(
+      error.message + " Use Atualizar dados do servidor em Configurações.",
+      true,
+    );
+  });
 
 if (document.modelContext?.registerTool) {
   const lifecycle = new AbortController();
@@ -607,7 +942,9 @@ if (document.modelContext?.registerTool) {
                 chain: i.chain,
                 ...invoiceStatus(i),
               })),
-              storage: "authenticated_server", revision, available:ready,
+              storage: "authenticated_server",
+              revision,
+              available: ready,
               transfersExecuted: false,
             };
           },
