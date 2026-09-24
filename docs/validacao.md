@@ -60,3 +60,12 @@ Inspeção no navegador local:
 - Entrevistas, demanda, preço, economia de tempo ou resultado comercial.
 
 Essas lacunas não são preenchidas com simulações apresentadas como reais. A versão serve para testar a proposta e revisar o fluxo antes de um piloto.
+
+## Publicação
+
+- Repositório público confirmado: `SouBeatrizKaroline/safraflux`.
+- Commit funcional `9d396fd9e213d721c95a20fcecc1640d50bd3c04`, com [CI aprovado no GitHub](https://github.com/SouBeatrizKaroline/safraflux/actions/runs/35941267350).
+- Canal privado de relato de vulnerabilidades habilitado no GitHub.
+- Empacotamento do site concluído e versão salva. O Windows exigiu disponibilizar o Bash do Git e configurar o tar para tratar caminhos de disco como locais.
+- A primeira publicação hospedada falhou por timeout de emissão de certificado TLS; não houve erro de aplicação nessa etapa. Em 24/09/2026 foi solicitada nova publicação da mesma versão, sem recriar o projeto ou alterar seu acesso privado.
+- Consulta real Devnet também confirmada pela interface no navegador: endereço descartável sem fundos, saldos zero obtidos da rede, sem transferências.

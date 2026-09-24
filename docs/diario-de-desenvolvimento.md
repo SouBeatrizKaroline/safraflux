@@ -35,4 +35,10 @@ Os commits intermediários preservam o andamento da pesquisa; apenas os recursos
 - Fluxos de rateio, cobrança, rejeição de assinatura e persistência conferidos no navegador.
 - README, arquitetura, segurança, contribuição, licença MIT e resumo em inglês preparados.
 - GitHub recebeu checkpoints em intervalos aproximados de dois minutos durante as etapas ativas. A rotina original tinha duração limitada; depois da interrupção/retomada, foi reiniciada, sem simular continuidade no intervalo.
-- A publicação periódica será encerrada ao concluir a entrega. Registro de validação e limitações: `docs/validacao.md`.
+- A publicação periódica foi encerrada na finalização da versão de código. Registro de validação e limitações: `docs/validacao.md`.
+
+## 24/09/2026 — conferência final da hospedagem
+
+- Confirmado que a versão funcional está sincronizada com o GitHub e tem CI aprovado.
+- Identificada falha externa na emissão do certificado TLS do endereço hospedado. Solicitada uma nova tentativa da versão já salva, preservando acesso privado.
+- Documentação atualizada para separar publicação do código, execução local e hospedagem online. Nenhum endereço foi apresentado como funcionando sem confirmação do serviço.
