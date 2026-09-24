@@ -28,6 +28,10 @@ test('RPC indisponível permanece erro, sem saldo fictício',async t=>{
   await assert.rejects(rpc('https://example.invalid','getBalance',[]),/429/);
 });
 test('confirmação pendente não quita cobrança',async t=>{
-  t.mock.method(globalThis,'fetch',async()=>({ok:true,json:async()=>({result:{value:[{confirmationStatus:'confirmed',err:null}]}})}));
+  t.mock.method(globalThis,'fetch',async(url,options)=>({ok:true,json:async()=>({result:JSON.parse(options.body).method==='getGenesisHash'?'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG':{value:[{confirmationStatus:'confirmed',err:null}]}})}));
   await assert.rejects(verifyReceipt({chain:'solana-devnet'},'1'.repeat(88)),/finalizada/);
+});
+test('rede Solana trocada não apresenta saldo de outro ambiente',async t=>{
+  t.mock.method(globalThis,'fetch',async()=>({ok:true,json:async()=>({result:'wrong-genesis'})}));
+  await assert.rejects(balances({chain:'solana-devnet',address:CHAINS['solana-devnet'].mint}),/rede Solana diferente/);
 });

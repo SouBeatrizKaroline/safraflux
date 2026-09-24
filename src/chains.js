@@ -10,6 +10,11 @@ export const CHAINS = {
   arbitrum: {name: 'Arbitrum', family: 'evm', rpc: 'https://arb1.arbitrum.io/rpc', chainId: '0xa4b1', symbol: 'ETH', decimals: 18, mint: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', explorer: 'https://arbiscan.io'}
 };
 
+const GENESIS = {'solana-mainnet':'5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d','solana-devnet':'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG'};
+async function assertSolanaNetwork(endpoint, chain) {
+  if (await rpc(endpoint, 'getGenesisHash') !== GENESIS[chain]) throw new Error('O RPC respondeu por uma rede Solana diferente.');
+}
+
 export function validateAddress(chain, address) {
   if (!CHAINS[chain]) throw new Error('Rede não suportada.');
   const value = address.trim();
@@ -34,6 +39,7 @@ export async function balances(wallet, endpoints = {}) {
   const chain = CHAINS[wallet.chain], endpoint = endpoints[wallet.chain] || chain.rpc;
   const address = validateAddress(wallet.chain, wallet.address);
   if (chain.family === 'solana') {
+    await assertSolanaNetwork(endpoint, wallet.chain);
     const [native, tokens] = await Promise.all([
       rpc(endpoint, 'getBalance', [address, {commitment: 'finalized'}]),
       rpc(endpoint, 'getTokenAccountsByOwner', [address, {mint: chain.mint}, {encoding: 'jsonParsed', commitment: 'finalized'}])
@@ -70,6 +76,7 @@ export async function verifyReceipt(invoice, signature, endpoints = {}) {
   if (!/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature)) throw new Error('Assinatura Solana inválida.');
   const chain = CHAINS[invoice.chain];
   const endpoint = endpoints[invoice.chain] || chain.rpc;
+  await assertSolanaNetwork(endpoint, invoice.chain);
   const status = await rpc(endpoint, 'getSignatureStatuses', [[signature], {searchTransactionHistory: true}]);
   if (status.value[0]?.confirmationStatus !== 'finalized' || status.value[0]?.err) throw new Error('A transação ainda não está finalizada com sucesso nesta rede.');
   const tx = await rpc(endpoint, 'getTransaction', [signature, {encoding: 'json', commitment: 'finalized', maxSupportedTransactionVersion: 0}]);
