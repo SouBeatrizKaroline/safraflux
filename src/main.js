@@ -1,3 +1,4 @@
+import { api } from "./api.js";
 import { mergeBackup, MAX_BACKUP_BYTES } from "./backup.js";
 import "./style.css";
 import QRCode from "qrcode";
@@ -25,24 +26,21 @@ import {
 } from "./chains.js";
 
 const KEY = "safraflux-v1";
-const fresh = () => ({ wallets: [], invoices: [], endpoints: {} });
-let state = fresh(),
-  loadError = "";
-try {
-  const raw = localStorage.getItem(KEY);
-  if (raw) {
-    state = JSON.parse(raw);
-    if (
-      !Array.isArray(state.wallets) ||
-      !Array.isArray(state.invoices) ||
-      !state.endpoints
-    )
-      throw new Error();
-  }
-} catch {
-  state = fresh();
-  loadError =
-    "Os registros locais não puderam ser lidos. Nenhum saldo foi recuperado.";
+let state={wallets:[],invoices:[],producers:[],lots:[],splits:[],endpoints:{}}, revision=0, ready=false, loadError="";
+let legacyBackup=null;
+try { legacyBackup=localStorage.getItem(KEY); state.endpoints=JSON.parse(localStorage.getItem('safraflux-rpc')||'{}'); } catch {}
+async function loadRemote() {
+  const result=await api('state');
+  const endpoints=state.endpoints;
+  state={...result.state,endpoints};revision=result.revision;ready=true;
+}
+async function mutate(action,payload) {
+  if(!ready)throw new Error('Carregue os registros antes de salvar.');
+  const result=await api('action',{revision,action,payload});
+  const endpoints=state.endpoints;
+  const cached=new Map(state.wallets.map(w=>[w.id,{balance:w.balance,error:w.error}]));
+  state={...result.state,endpoints};revision=result.revision;
+  for(const w of state.wallets)Object.assign(w,cached.get(w.id)||{});
 }
 let view = "overview";
 let activeInvoice = null;
@@ -63,9 +61,7 @@ const when = (iso) =>
     dateStyle: "short",
     timeStyle: "short",
   });
-const save = () => {
-  localStorage.setItem(KEY, JSON.stringify(state));
-};
+const save = () => localStorage.setItem('safraflux-rpc',JSON.stringify(state.endpoints));
 const chainOptions = (solanaOnly = false) =>
   Object.entries(CHAINS)
     .filter(([, c]) => !solanaOnly || c.family === "solana")
@@ -120,9 +116,11 @@ function render() {
     ["split", "Rateio por produtor", "04"],
     ["research", "Pesquisa e projeto", "05"],
     ["settings", "Configurações", "06"],
+    ["operations", "Operação agrícola", "07"],
+    ["history", "Histórico", "08"],
   ];
   $("#app").innerHTML =
-    `<a class="skip" href="#content">Pular para o conteúdo</a><aside class="sidebar"><a class="brand" href="#" aria-label="SafraFlux início"><span class="brand-mark">S</span>SafraFlux<span class="beta">LAB</span></a><div class="workspace-label">OPERAÇÃO AGRÍCOLA</div><nav aria-label="Principal">${menu.map(([id, label, n]) => `<button class="nav ${view === id ? "active" : ""}" data-nav="${id}" ${view === id ? 'aria-current="page"' : ""}><span>${n}</span>${label}</button>`).join("")}</nav><div class="sidebar-bottom"><span class="network-mark">◎</span><div>Solana primeiro<small>Conectado ao campo.</small></div></div></aside><div class="page"><header class="topbar"><span>COOPERATIVAS & EXPORTADORES <span class="slash">/</span> CAFÉ</span><a href="https://github.com/SouBeatrizKaroline/safraflux" target="_blank" rel="noreferrer">Projeto aberto ↗</a></header><main id="content" tabindex="-1"><div id="notice" class="notice" role="status" aria-live="polite" hidden></div>${{ overview: overview, wallets: walletsView, invoices: invoicesView, split: splitView, research: researchView, settings: settingsView }[view]()}</main><footer>Registros salvos apenas neste navegador. <strong>Não há custódia nem repasse automático.</strong></footer></div><dialog id="dialog"><div id="dialog-content"></div><button class="dialog-close secondary" id="close-dialog">Fechar</button></dialog>`;
+    `<a class="skip" href="#content">Pular para o conteúdo</a><aside class="sidebar"><a class="brand" href="#" aria-label="SafraFlux início"><span class="brand-mark">S</span>SafraFlux<span class="beta">LAB</span></a><div class="workspace-label">OPERAÇÃO AGRÍCOLA</div><nav aria-label="Principal">${menu.map(([id, label, n]) => `<button class="nav ${view === id ? "active" : ""}" data-nav="${id}" ${view === id ? 'aria-current="page"' : ""}><span>${n}</span>${label}</button>`).join("")}</nav><div class="sidebar-bottom"><span class="network-mark">◎</span><div>Solana primeiro<small>Conectado ao campo.</small></div></div></aside><div class="page"><header class="topbar"><span>COOPERATIVAS & EXPORTADORES <span class="slash">/</span> CAFÉ</span><a href="https://github.com/SouBeatrizKaroline/safraflux" target="_blank" rel="noreferrer">Projeto aberto ↗</a></header><main id="content" tabindex="-1"><div id="notice" class="notice" role="status" aria-live="polite" hidden></div>${{ overview: overview, wallets: walletsView, invoices: invoicesView, split: splitView, research: researchView, settings: settingsView, operations: operationsView, history: historyView }[view]()}</main><footer>Registros protegidos por conta e salvos no servidor. <strong>Não há custódia nem repasse automático.</strong></footer></div><dialog id="dialog"><div id="dialog-content"></div><button class="dialog-close secondary" id="close-dialog">Fechar</button></dialog>`;
   document
     .querySelectorAll("[data-nav]")
     .forEach((b) => b.addEventListener("click", () => navigate(b.dataset.nav)));
@@ -170,7 +168,7 @@ function invoiceList(limit = 100) {
     : '<div class="empty"><div class="empty-lines" aria-hidden="true">≡</div><h3>Nenhum lote cadastrado ainda</h3><p>Crie uma cobrança para reunir os recebimentos<br>e começar a conciliação.</p><button class="secondary" data-nav="invoices">Cadastrar primeiro lote</button></div>';
 }
 function invoicesView() {
-  return `${heading("CONCILIAÇÃO", "Lotes e cobranças", "Uma referência por cobrança. Cada entrada conferida na rede.")}<section class="panel"><h2>Nova cobrança em USDC</h2><form id="invoice-form" class="grid-form"><label>Identificação do lote<input name="lot" placeholder="Ex.: CAF-2026-014" maxlength="60" required></label><label>Valor em USDC<input name="amount" inputmode="decimal" placeholder="Ex.: 1250,50" required></label><label>Rede<select name="chain">${chainOptions(true)}</select></label><label>Carteira de recebimento<input name="recipient" placeholder="Endereço público Solana" required></label><label class="wide">Referência interna do contrato (opcional)<input name="contract" maxlength="80" placeholder="Use um código; não inclua dados pessoais"></label><p class="form-note wide">A cobrança é um registro local e um pedido Solana Pay. O recebimento só muda de status após consulta de uma transação finalizada. A entrega do café deve ser comprovada fora da blockchain.</p><button class="primary">Criar cobrança</button></form></section><section class="panel"><div class="section-title"><h2>Cobranças cadastradas</h2><button class="text-button" id="export-invoices">Exportar CSV ↓</button></div>${invoiceList()}</section>`;
+  return `${heading("CONCILIAÇÃO", "Lotes e cobranças", "Uma referência por cobrança. Cada entrada conferida na rede.")}<section class="panel"><h2>Nova cobrança em USDC</h2><form id="invoice-form" class="grid-form"><label>Identificação do lote<input name="lot" placeholder="Ex.: CAF-2026-014" maxlength="60" required></label><label>Valor em USDC<input name="amount" inputmode="decimal" placeholder="Ex.: 1250,50" required></label><label>Rede<select name="chain">${chainOptions(true)}</select></label><label>Carteira de recebimento<input name="recipient" placeholder="Endereço público Solana" required></label><label class="wide">Referência interna do contrato (opcional)<input name="contract" maxlength="80" placeholder="Use um código; não inclua dados pessoais"></label><p class="form-note wide">A cobrança é salva na sua conta e gera um pedido Solana Pay. O recebimento só muda de status após consulta de uma transação finalizada. A entrega do café deve ser comprovada fora da blockchain.</p><button class="primary">Criar cobrança</button></form></section><section class="panel"><div class="section-title"><h2>Cobranças cadastradas</h2><button class="text-button" id="export-invoices">Exportar CSV ↓</button></div>${invoiceList()}</section>`;
 }
 function splitView() {
   return `${heading("MEMÓRIA DE CÁLCULO", "Rateio por produtor", "Distribua o valor-base por quantidade e o prêmio por quantidade × pontos.")}<section class="panel"><div class="section-title"><h2>Dados do rateio</h2><button class="text-button" id="fill-example">Preencher exemplo fictício</button></div><form id="split-form"><div class="form-row"><label>Origem do valor<select name="source" id="split-source"><option value="manual">Valor informado manualmente</option>${state.invoices.map((i) => `<option value="${i.id}">${esc(i.lot)} · recebido ${invoiceStatus(i).received} USDC${CHAINS[i.chain].test ? " de teste" : ""}</option>`).join("")}</select></label><label>Valor a distribuir (USDC)<input name="total" inputmode="decimal" required placeholder="0,00"></label><label>Parte destinada ao prêmio (%)<input name="premium" inputmode="decimal" value="0" required></label></div><label>Produtores, um por linha: código; quantidade em kg; pontos de qualidade<textarea name="producers" rows="6" placeholder="PROD-01; 600; 80&#10;PROD-02; 400; 90" required></textarea></label><div class="split-explainer"><strong>Critério transparente</strong><p>O valor-base segue a participação em kg. O prêmio segue kg × pontos (0 a 100), definidos no contrato. Pontos são informações declaradas, sem certificação automática. O arredondamento preserva o total até a sexta casa decimal.</p></div><button class="primary">Calcular rateio</button><span id="split-mode" class="subtle">Cálculo local. Nenhum pagamento será enviado.</span></form><div id="split-result" aria-live="polite"></div></section>`;
@@ -179,7 +177,7 @@ function researchView() {
   return `${heading("DECISÕES DOCUMENTADAS", "Um problema de operação.", "Pesquisa, critérios e limites da proposta em acesso aberto.")}<div class="columns"><section class="panel"><div class="eyebrow">HIPÓTESE CENTRAL</div><h2>Receber não encerra o trabalho.</h2><p>Uma venda pode reunir a produção de várias famílias. Depois do recebimento, ainda é preciso identificar o lote, conferir pagamentos parciais e explicar o valor devido a cada produtor.</p><p>O recorte inicial são cooperativas e pequenas exportadoras de café especial com compradores dispostos a pagar em stablecoins.</p><p><strong>Validação comercial pendente:</strong> nenhuma entrevista, parceria, venda ou economia foi comprovada.</p></section><section class="panel"><h2>O que orienta o projeto</h2><p>AgriDex já conecta agro e blockchain. Request Finance já organiza operações em cripto. Nossa hipótese é que conciliação por lote e prêmio por produtor merecem um fluxo próprio.</p><p>Solana é a integração principal. Outras redes entram primeiro na consulta de saldos; recebimento entre redes e crédito ficam fora desta versão.</p></section></div><section class="panel"><h2>Leia a pesquisa completa</h2><div class="research-links"><a href="https://github.com/SouBeatrizKaroline/safraflux/blob/main/docs/pesquisa-de-mercado.md" target="_blank" rel="noreferrer"><span>01</span><div><strong>Mercado e concorrentes</strong><small>Fontes primárias, público, preço e hipóteses.</small></div>↗</a><a href="https://github.com/SouBeatrizKaroline/safraflux/blob/main/docs/hackathon-e-benchmarks.md" target="_blank" rel="noreferrer"><span>02</span><div><strong>Hackathon e premiados</strong><small>Regras oficiais e dez referências de produto.</small></div>↗</a><a href="https://github.com/SouBeatrizKaroline/safraflux#readme" target="_blank" rel="noreferrer"><span>03</span><div><strong>README do projeto</strong><small>Arquitetura, execução e próximos passos.</small></div>↗</a></div></section>`;
 }
 function settingsView() {
-  return `${heading("SEU AMBIENTE", "Configurações", "Provedores de consulta e cópia dos registros locais.")}<section class="panel"><h2>Endpoints RPC</h2><p>Provedores públicos podem limitar consultas. Informe somente URLs HTTPS de sua confiança. As URLs ficam neste navegador; não use chaves secretas de servidor.</p><form id="settings-form">${Object.entries(
+  return `${heading("SEU AMBIENTE", "Configurações", "Consultas de saldo e cópia dos registros da sua conta.")}<section class="panel"><h2>Endpoints RPC</h2><p>Provedores públicos podem limitar consultas. Informe somente URLs HTTPS de sua confiança. As URLs ficam neste navegador; não use chaves secretas de servidor.</p><form id="settings-form">${Object.entries(
     CHAINS,
   )
     .map(
@@ -188,7 +186,7 @@ function settingsView() {
     )
     .join(
       "",
-    )}<button class="primary">Salvar provedores</button></form></section><section class="panel"><h2>Seus registros</h2><p>Carteiras, cobranças e comprovantes ficam no armazenamento deste navegador. Não há conta compartilhada ou servidor de dados. A exportação não inclui URLs de provedores.</p><button class="secondary" id="backup">Exportar registros JSON</button><label>Restaurar backup JSON<input id="restore-file" type="file" accept=".json,application/json"></label><p id="restore-preview" role="status"></p><button class="primary" id="restore-confirm" disabled>Importar registros validados</button><p class="subtle">Importe um backup para reunir registros neste navegador. Os pagamentos importados precisam de nova verificação na rede. Não há sincronização automática.</p></section>`;
+    )}<button class="primary">Salvar provedores</button></form></section><section class="panel"><h2>Seus registros</h2><button id="reload-data" class="secondary">Atualizar dados do servidor</button>${legacyBackup ? `<button id="migrate-local" class="secondary">Importar registros antigos deste navegador</button>` : ""}<p>Carteiras, cobranças, produtores, lotes e rateios ficam vinculados à sua conta no servidor. Exporte uma cópia privada regularmente. A exportação não inclui URLs de provedores.</p><button class="secondary" id="backup">Exportar registros JSON</button><label>Restaurar backup JSON<input id="restore-file" type="file" accept=".json,application/json"></label><p id="restore-preview" role="status"></p><button class="primary" id="restore-confirm" disabled>Importar registros validados</button><p class="subtle">Importe um backup para reunir registros neste navegador. Os pagamentos importados precisam de nova verificação na rede. Abra a aplicação em outro dispositivo com a mesma conta para acessar os registros.</p></section>`;
 }
 
 async function refreshWallet(id) {
@@ -202,23 +200,17 @@ async function refreshWallet(id) {
   }
   save();
 }
-function addWallet(name, chain, address) {
-  const normalized = validateAddress(chain, address);
-  if (state.wallets.some((w) => w.chain === chain && w.address === normalized))
-    throw new Error("Esta carteira já está sendo acompanhada nesta rede.");
-  if (state.wallets.length >= 30)
-    throw new Error("Limite desta versão: 30 carteiras.");
-  const id = crypto.randomUUID();
-  state.wallets.push({ id, name: name.trim(), chain, address: normalized });
-  save();
-  return id;
+async function addWallet(name,chain,address) {
+  await mutate('wallet.add',{name,chain,address});
+  return state.wallets.at(-1).id;
 }
 function bind() {
+  bindOperations();
   $("#wallet-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
     run(e.submitter, async () => {
       const d = Object.fromEntries(new FormData(e.target));
-      const id = addWallet(d.name, d.chain, d.address);
+      const id = await addWallet(d.name, d.chain, d.address);
       await refreshWallet(id);
       render();
       notice(
@@ -236,14 +228,9 @@ function bind() {
   );
   document.querySelectorAll("[data-remove-wallet]").forEach((b) =>
     b.addEventListener("click", () => {
-      state.wallets = state.wallets.filter(
-        (w) => w.id !== b.dataset.removeWallet,
-      );
-      save();
-      render();
-      notice(
-        "Endereço removido do acompanhamento. As cobranças foram preservadas.",
-      );
+      run(b, async()=>{
+        await mutate('wallet.remove',{id:b.dataset.removeWallet});render();notice('Carteira removida do acompanhamento. Cobranças preservadas.');
+      });
     }),
   );
   $("#refresh-all")?.addEventListener("click", (e) =>
@@ -260,26 +247,9 @@ function bind() {
     e.preventDefault();
     run(e.submitter, async () => {
       const d = Object.fromEntries(new FormData(e.target));
-      const n = units(d.amount);
-      if (n <= 0n) throw new Error("O valor precisa ser maior que zero.");
-      const recipient = validateAddress(d.chain, d.recipient);
-      const lot = d.lot.trim();
-      if (!lot) throw new Error("Informe o lote.");
-      const invoice = {
-        id: crypto.randomUUID(),
-        lot,
-        contract: d.contract.trim(),
-        amount: decimal(n),
-        recipient,
-        chain: d.chain,
-        reference: createReference(),
-        createdAt: new Date().toISOString(),
-        receipts: [],
-      };
-      state.invoices.unshift(invoice);
-      save();
-      render();
-      await openInvoice(invoice.id);
+      await mutate('invoice.add',d);
+      const invoice=state.invoices[0];
+      render();await openInvoice(invoice.id);
     });
   });
   document
@@ -364,6 +334,7 @@ function bind() {
       const source = state.invoices.find((i) => i.id === d.source);
       const total = source ? invoiceStatus(source).received : d.total;
       splitResult = {
+        producers, sourceId:d.source,
         rows: calculateSplit(total, producers, d.premium),
         total,
         source: source
@@ -372,7 +343,11 @@ function bind() {
         premium: d.premium,
       };
       $("#split-result").innerHTML =
-        `<div class="section-title result-title"><div><div class="eyebrow">TOTAL PRESERVADO · ${fmt(total)} USDC</div><h2>Memória do rateio</h2></div><button id="export-split" class="secondary">Exportar CSV ↓</button></div><p class="subtle">${esc(splitResult.source)} · Prêmio: ${esc(d.premium)}% · Valores calculados; repasses não executados.</p><div class="table-wrap"><table><thead><tr><th>Produtor</th><th>Quantidade</th><th>Base USDC</th><th>Prêmio USDC</th><th>Total USDC</th></tr></thead><tbody>${splitResult.rows.map((r) => `<tr><td><strong>${esc(r.name)}</strong></td><td>${esc(r.kg)} kg</td><td>${fmt(r.base)}</td><td>${fmt(r.premium)}</td><td><strong>${fmt(r.total)}</strong></td></tr>`).join("")}</tbody></table></div>`;
+        `<div class="section-title result-title"><div><div class="eyebrow">TOTAL PRESERVADO · ${fmt(total)} USDC</div><h2>Memória do rateio</h2></div><button id="save-split" class="primary">Salvar rateio no histórico</button><button id="export-split" class="secondary">Exportar CSV ↓</button></div><p class="subtle">${esc(splitResult.source)} · Prêmio: ${esc(d.premium)}% · Valores calculados; repasses não executados.</p><div class="table-wrap"><table><thead><tr><th>Produtor</th><th>Quantidade</th><th>Base USDC</th><th>Prêmio USDC</th><th>Total USDC</th></tr></thead><tbody>${splitResult.rows.map((r) => `<tr><td><strong>${esc(r.name)}</strong></td><td>${esc(r.kg)} kg</td><td>${fmt(r.base)}</td><td>${fmt(r.premium)}</td><td><strong>${fmt(r.total)}</strong></td></tr>`).join("")}</tbody></table></div>`;
+      $("#save-split").addEventListener('click',event=>run(event.target,async()=>{
+        await mutate('split.save',{lot:source?.lot||'Avulso',source:splitResult.sourceId,total:splitResult.total,premium:splitResult.premium,producers:splitResult.producers});
+        render();notice('Rateio salvo com sua regra e memória de cálculo. Consulte Operação agrícola.');
+      }));
       $("#export-split").addEventListener("click", () =>
         download(
           "safraflux-rateio.csv",
@@ -428,7 +403,7 @@ function bind() {
       if (file.size > MAX_BACKUP_BYTES)
         throw new Error("O backup deve ter até 2 MB.");
       const raw = await file.text();
-      if (event.target.files?.[0] !== file) return;
+      if (!event.target.isConnected || event.target.files?.[0] !== file) return;
       const result = mergeBackup(state, raw);
       pendingBackup = raw;
       $("#restore-preview").textContent =
@@ -440,15 +415,13 @@ function bind() {
         " assinatura(s) para conferir. Os registros atuais serão preservados.";
       $("#restore-confirm").disabled = false;
     } catch (error) {
-      $("#restore-preview").textContent = error.message;
+      if($("#restore-preview"))$("#restore-preview").textContent = error.message;
     }
   });
-  $("#restore-confirm")?.addEventListener("click", () => {
+  $("#restore-confirm")?.addEventListener("click", async () => {
     try {
       if (!pendingBackup) return;
-      const result = mergeBackup(state, pendingBackup);
-      localStorage.setItem(KEY, JSON.stringify(result.state));
-      state = result.state;
+      await mutate("backup.import",JSON.parse(pendingBackup));
       render();
       notice(
         "Backup importado. Abra as cobranças para conferir os pagamentos na rede.",
@@ -466,6 +439,7 @@ function bind() {
           exportedAt: new Date().toISOString(),
           wallets: state.wallets,
           invoices: state.invoices,
+          producers: state.producers, lots: state.lots, splits: state.splits,
         },
         null,
         2,
@@ -550,20 +524,7 @@ async function openInvoice(id) {
         )
       )
         throw new Error("Esta transação já foi conciliada neste navegador.");
-      const receipt = await verifyReceipt(i, signature, state.endpoints);
-      if (
-        state.invoices.some(
-          (other) =>
-            other.chain === i.chain &&
-            other.receipts.some((r) => r.signature === signature),
-        )
-      )
-        throw new Error("Esta transação já foi conciliada.");
-      appendReceipt(state.invoices, id, receipt);
-      i.pendingSignatures = (i.pendingSignatures || []).filter(
-        (s) => s !== signature,
-      );
-      save();
+      await mutate('invoice.verify',{id,signature});
       $("#dialog").close();
       render();
       await openInvoice(id);
@@ -582,6 +543,7 @@ async function openInvoice(id) {
 }
 
 render();
+loadRemote().then(()=>render()).catch(error=>{ready=false;notice(error.message+' Use Atualizar dados do servidor em Configurações.',true);});
 
 if (document.modelContext?.registerTool) {
   const lifecycle = new AbortController();
@@ -592,7 +554,7 @@ if (document.modelContext?.registerTool) {
           name: "read_safraflux_summary",
           title: "Ler resumo da operação",
           description:
-            "Lê a quantidade de carteiras e o estado das cobranças locais; não consulta a rede nem movimenta fundos.",
+            "Lê a quantidade de carteiras e o estado das cobranças carregadas do servidor; não consulta a rede nem movimenta fundos.",
           inputSchema: {
             type: "object",
             properties: {},
@@ -614,7 +576,7 @@ if (document.modelContext?.registerTool) {
                 chain: i.chain,
                 ...invoiceStatus(i),
               })),
-              storage: "local_browser",
+              storage: "authenticated_server", revision, available:ready,
               transfersExecuted: false,
             };
           },
