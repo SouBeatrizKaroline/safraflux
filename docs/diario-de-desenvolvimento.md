@@ -50,3 +50,5 @@ Os commits intermediários preservam o andamento da pesquisa; apenas os recursos
 - Implementada restauração JSON com prévia, validação, mesclagem sem substituir registros e rejeição de referências conflitantes.
 - Comprovantes importados viram assinaturas pendentes de nova verificação; valores recebidos e saldos do arquivo não são aceitos como evidência.
 - Sete testes adicionais cobrem adulteração, idempotência, preservação dos dados locais, formatos e limites. Total: 30 testes aprovados; compilação concluída.
+
+- Restauração conferida na interface e publicada no site privado às 11:58 UTC. GitHub atualizado durante o trabalho; CI da versão hospedada aprovado.

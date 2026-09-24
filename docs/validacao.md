@@ -78,3 +78,5 @@ Essas lacunas não são preenchidas com simulações apresentadas como reais. A 
 O teste completo em Devnet permanece pendente: a solicitação de 0,01 SOL de teste ao RPC oficial retornou erro interno (-32603) às 11:46 UTC. Não houve transferência.
 
 Interface local: seleção de arquivo, prévia, confirmação e mesclagem verificadas no navegador. A cobrança QA-RESTAURACAO-SEM-PAGAMENTO foi acrescentada com recebido zero e situação pendente; a cobrança e a carteira anteriores permaneceram presentes.
+
+Nova publicação confirmada em 24/09/2026 às 11:58:23 UTC: restauração disponível no site privado. Código hospedado: 9187f6f3b83c54b542625e12eb2b7c688f94d094. CI aprovado: https://github.com/SouBeatrizKaroline/safraflux/actions/runs/35995952906 . Publicação retornou succeeded, sem falha.
