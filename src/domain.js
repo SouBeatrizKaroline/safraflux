@@ -3,6 +3,7 @@ export const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 
 export function units(value, decimals = 6) {
   const raw = String(value).trim().replace(',', '.');
+  if (raw.length > 40) throw new Error('Valor acima do limite do protótipo.');
   if (!/^\d+(\.\d+)?$/.test(raw)) throw new Error('Use um valor positivo, sem separador de milhar.');
   const [integer, fraction = ''] = raw.split('.');
   if (fraction.length > decimals) throw new Error(`Use no máximo ${decimals} casas decimais.`);
@@ -53,6 +54,20 @@ export function invoiceStatus(invoice) {
   const total = (invoice.receipts || []).reduce((sum, r) => sum + BigInt(r.amount), 0n);
   const expected = units(invoice.amount);
   return {received: decimal(total), outstanding: decimal(total < expected ? expected - total : 0n), excess: decimal(total > expected ? total - expected : 0n), status: total === 0n ? 'Pendente' : total < expected ? 'Parcial' : total === expected ? 'Recebido' : 'Acima do valor'};
+}
+
+export function appendReceipt(invoices, invoiceId, receipt) {
+  const invoice = invoices.find(i => i.id === invoiceId);
+  if (!invoice) throw new Error('Cobrança não encontrada.');
+  if (invoices.some(i => i.chain === invoice.chain && i.receipts.some(r => r.signature === receipt.signature))) throw new Error('Esta transação já foi conciliada neste navegador.');
+  invoice.receipts.push(receipt);
+}
+
+export function formatAmount(value) {
+  const normalized = String(value).trim().replace(',', '.');
+  if (!/^\d+(\.\d+)?$/.test(normalized)) return '—';
+  const [integer, fraction] = normalized.split('.');
+  return BigInt(integer).toLocaleString('pt-BR') + (fraction ? ',' + fraction : '');
 }
 
 // A reference binds the on-chain receipt to an invoice; it is not proof of goods or quality.

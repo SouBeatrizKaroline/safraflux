@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import bs58 from 'bs58';
-import {units, decimal, allocate, calculateSplit, invoiceStatus, receiptFromTransaction, csv, TOKEN_PROGRAM} from '../src/domain.js';
+import {units, decimal, allocate, calculateSplit, invoiceStatus, receiptFromTransaction, csv, TOKEN_PROGRAM, appendReceipt, formatAmount} from '../src/domain.js';
 
 test('valores monetários mantêm as seis casas sem ponto flutuante', () => {
   assert.equal(units('1234,000001'), 1234000001n);
@@ -35,6 +35,16 @@ test('status distingue entrada parcial, completa e excedente', () => {
   assert.equal(invoiceStatus({amount:'10',receipts:[{amount:'3000000'}]}).outstanding,'7');
   assert.equal(invoiceStatus({amount:'10',receipts:[{amount:'10000000'}]}).status,'Recebido');
   assert.equal(invoiceStatus({amount:'10',receipts:[{amount:'11000000'}]}).excess,'1');
+});
+test('formatação mantém valores acima da precisão de Number', () => {
+  assert.equal(formatAmount('9007199254740993.000001'),'9.007.199.254.740.993,000001');
+});
+test('a mesma assinatura não quita duas cobranças na mesma rede', () => {
+  const invoices=[{id:'a',chain:'solana-devnet',receipts:[]},{id:'b',chain:'solana-devnet',receipts:[]}];
+  appendReceipt(invoices,'a',{signature:'sig',amount:'1000000'});
+  assert.throws(()=>appendReceipt(invoices,'a',{signature:'sig',amount:'1000000'}),/já foi/);
+  assert.throws(()=>appendReceipt(invoices,'b',{signature:'sig',amount:'1000000'}),/já foi/);
+  assert.equal(invoices[1].receipts.length,0);
 });
 
 const invoice={recipient:'owner',reference:'reference',createdAt:'2026-09-23T12:00:00Z'};

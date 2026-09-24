@@ -1,6 +1,6 @@
 import './style.css';
 import QRCode from 'qrcode';
-import {units, decimal, calculateSplit, invoiceStatus, csv} from './domain.js';
+import {units, decimal, calculateSplit, invoiceStatus, csv, appendReceipt, formatAmount} from './domain.js';
 import {CHAINS, validateAddress, balances, createReference, paymentURI, verifyReceipt, solanaWallets, connectSolana, evmProviders, connectEVM, explorerTx} from './chains.js';
 
 const KEY = 'safraflux-v1';
@@ -14,7 +14,7 @@ let splitResult = null;
 const $ = (selector) => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const short = s => `${s.slice(0, 5)}…${s.slice(-5)}`;
-const fmt = n => new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 6}).format(Number(n));
+const fmt = formatAmount;
 const when = iso => new Date(iso).toLocaleString('pt-BR', {dateStyle: 'short', timeStyle: 'short'});
 const save = () => { localStorage.setItem(KEY, JSON.stringify(state)); };
 const chainOptions = (solanaOnly = false) => Object.entries(CHAINS).filter(([,c]) => !solanaOnly || c.family === 'solana').map(([id,c]) => `<option value="${id}" ${id === 'solana-devnet' ? 'selected' : ''}>${c.name}${c.test ? ' · sem valor financeiro' : ' · rede principal'}</option>`).join('');
@@ -123,7 +123,7 @@ async function openInvoice(id) {
       if(state.invoices.some(other=>other.chain===i.chain&&other.receipts.some(r=>r.signature===signature)))throw new Error('Esta transação já foi conciliada neste navegador.');
       const receipt=await verifyReceipt(i,signature,state.endpoints);
       if(state.invoices.some(other=>other.chain===i.chain&&other.receipts.some(r=>r.signature===signature)))throw new Error('Esta transação já foi conciliada.');
-      i.receipts.push(receipt);save();$('#dialog').close();render();await openInvoice(id);$('#verify-result').textContent='Recebimento finalizado verificado e registrado.';
+      appendReceipt(state.invoices,id,receipt);save();$('#dialog').close();render();await openInvoice(id);$('#verify-result').textContent='Recebimento finalizado verificado e registrado.';
     }catch(e){$('#verify-result').textContent=e.message;$('#verify-result').className='error-text';}
     finally{if(button.isConnected){button.disabled=false;button.textContent='Verificar recebimento';}}
   });
