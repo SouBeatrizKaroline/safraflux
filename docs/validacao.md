@@ -1,5 +1,8 @@
 # Registro de validação
 
+**Leitura do documento:** evidências em ordem de desenvolvimento. A versão com backend tem 39 testes aprovados e publicação confirmada; as contagens anteriores descrevem versões históricas. A leitura do banco hospedado com identidade pessoal depende da conclusão autorizada do login.
+
+
 Execução em **23/09/2026, horário de Brasília**. O teste de integração final ocorreu em `2026-09-24T00:58:51Z` (21:58:51 do dia 23 no Brasil).
 
 ## Testes automatizados

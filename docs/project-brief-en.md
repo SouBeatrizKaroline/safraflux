@@ -4,16 +4,16 @@ SafraFlux connects agricultural lots to stablecoin receipts and producer allocat
 
 A lot may combine several producers' output. Receiving funds does not identify the commercial obligation or explain each producer's share. SafraFlux links a lot to a unique payment reference, checks incoming USDC and calculates separate base-price and quality-premium allocations.
 
-## Implemented prototype
+## Implemented application
 
 - Multiple public addresses and optional wallet discovery through Solana Wallet Standard/EIP-6963.
 - Live native-token/USDC balances on Solana, Base, Ethereum and Arbitrum, plus Solana Devnet.
 - Solana Pay requests/QR codes with explicit network labels.
 - User-supplied signature verification: finalization, reference in the SPL instruction, recipient ATA, mint and exact credited amount.
-- Partial/excess receipts, local duplicate prevention and integer-based allocation.
-- CSV statements and JSON export.
+- Partial/excess receipts, server-side duplicate prevention within each account and integer-based allocation.
+- CSV statements, JSON import/export, producer and lot records, saved allocations and recovery snapshots.
 
-The app does not custody funds, send transfers, execute payouts or issue an agricultural token. Records are browser-local. Concurrent organizational use, durable audit trails and authenticated users require a backend not implemented yet.
+The app does not custody funds, send transfers, execute payouts or issue an agricultural token. Records are stored in D1 behind an authenticated Worker API. Per-account authorization, revision conflicts and automatic recovery snapshots are implemented. Shared organizational roles remain outside the current release.
 
 ## Differentiation hypothesis
 
