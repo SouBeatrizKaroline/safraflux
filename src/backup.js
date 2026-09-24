@@ -35,7 +35,7 @@ export function mergeBackup(current, raw) {
     const chain = network(w.chain);
     const address = validateAddress(chain, field(w.address, 64));
     const name = field(w.name, 120);
-    if (!next.wallets.some(x => x.chain === chain && x.address.toLowerCase() === (CHAINS[chain].family === 'evm' ? address.toLowerCase() : '') || x.chain === chain && x.address === address)) {
+    if (!next.wallets.some(x => x.chain === chain && (CHAINS[chain].family === 'evm' ? x.address.toLowerCase() === address : x.address === address))) {
       next.wallets.push({ id: crypto.randomUUID(), name, chain, address });
       walletsAdded++;
     }

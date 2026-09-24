@@ -1,3 +1,4 @@
+import { mergeBackup, MAX_BACKUP_BYTES } from "./backup.js";
 import "./style.css";
 import QRCode from "qrcode";
 import {
@@ -187,7 +188,7 @@ function settingsView() {
     )
     .join(
       "",
-    )}<button class="primary">Salvar provedores</button></form></section><section class="panel"><h2>Seus registros</h2><p>Carteiras, cobranças e comprovantes ficam no armazenamento deste navegador. Não há conta compartilhada ou servidor de dados. A exportação não inclui URLs de provedores.</p><button class="secondary" id="backup">Exportar registros JSON</button><p class="subtle">Esta versão permite exportar; restauração e sincronização entre dispositivos ainda não estão disponíveis.</p></section>`;
+    )}<button class="primary">Salvar provedores</button></form></section><section class="panel"><h2>Seus registros</h2><p>Carteiras, cobranças e comprovantes ficam no armazenamento deste navegador. Não há conta compartilhada ou servidor de dados. A exportação não inclui URLs de provedores.</p><button class="secondary" id="backup">Exportar registros JSON</button><label>Restaurar backup JSON<input id="restore-file" type="file" accept=".json,application/json"></label><p id="restore-preview" role="status"></p><button class="primary" id="restore-confirm" disabled>Importar registros validados</button><p class="subtle">Importe um backup para reunir registros neste navegador. Os pagamentos importados precisam de nova verificação na rede. Não há sincronização automática.</p></section>`;
 }
 
 async function refreshWallet(id) {
@@ -417,6 +418,36 @@ function bind() {
       notice("Provedores salvos neste navegador.");
     });
   });
+  let pendingBackup = null;
+  $("#restore-file")?.addEventListener("change", async (event) => {
+    pendingBackup = null;
+    $("#restore-confirm").disabled = true;
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      if (file.size > MAX_BACKUP_BYTES) throw new Error("O backup deve ter até 2 MB.");
+      const raw = await file.text();
+      if (event.target.files?.[0] !== file) return;
+      const result = mergeBackup(state, raw);
+      pendingBackup = raw;
+      $("#restore-preview").textContent = result.walletsAdded + " carteira(s), " + result.invoicesAdded + " cobrança(s) e " + result.signaturesAdded + " assinatura(s) para conferir. Os registros atuais serão preservados.";
+      $("#restore-confirm").disabled = false;
+    } catch (error) {
+      $("#restore-preview").textContent = error.message;
+    }
+  });
+  $("#restore-confirm")?.addEventListener("click", () => {
+    try {
+      if (!pendingBackup) return;
+      const result = mergeBackup(state, pendingBackup);
+      localStorage.setItem(KEY, JSON.stringify(result.state));
+      state = result.state;
+      render();
+      notice("Backup importado. Abra as cobranças para conferir os pagamentos na rede.");
+    } catch (error) {
+      $("#restore-preview").textContent = error.message;
+    }
+  });
   $("#backup")?.addEventListener("click", () =>
     download(
       "safraflux-registros.json",
@@ -474,7 +505,7 @@ async function openInvoice(id) {
   const uri = paymentURI(i);
   const test = CHAINS[i.chain].test;
   $("#dialog-content").innerHTML =
-    `<div class="eyebrow">${CHAINS[i.chain].name}${test ? " · TOKENS SEM VALOR FINANCEIRO" : ""}</div><h2>${esc(i.lot)}</h2><p>${fmt(i.amount)} USDC · <span class="badge">${s.status}</span></p><div class="payment-grid"><canvas id="qr" aria-label="QR da solicitação de pagamento Solana Pay"></canvas><div><strong>Pedido Solana Pay</strong><p>${test ? "Selecione Devnet na carteira antes de usar." : "Esta cobrança usa USDC real na Solana Mainnet."} O link não seleciona a rede na carteira. Confira rede, token, valor e destinatário.</p><button class="secondary" id="copy-payment">Copiar solicitação</button></div></div><dl class="invoice-details"><dt>Destinatário</dt><dd class="mono">${esc(i.recipient)}</dd><dt>Referência única</dt><dd class="mono">${esc(i.reference)}</dd><dt>Recebido / falta / excedente</dt><dd>${s.received} / ${s.outstanding} / ${s.excess} USDC</dd><dt>Contrato</dt><dd>${esc(i.contract || "Não informado")}</dd></dl><form id="verify-form"><label>Assinatura da transação<input name="signature" placeholder="Cole a assinatura do pagamento" required autocomplete="off"></label><button class="primary">Verificar recebimento</button></form><p id="verify-result" role="status"></p><div class="receipts">${i.receipts.map((r) => `<p><a href="${explorerTx(i.chain, r.signature)}" target="_blank" rel="noreferrer">${short(r.signature)} ↗</a> · ${decimal(r.amount)} USDC · finalizada</p>`).join("")}</div><p class="subtle">A verificação confirma a entrada de USDC com esta referência. Não certifica comprador, contrato, qualidade ou entrega física.</p>`;
+    `<div class="eyebrow">${CHAINS[i.chain].name}${test ? " · TOKENS SEM VALOR FINANCEIRO" : ""}</div><h2>${esc(i.lot)}</h2><p>${fmt(i.amount)} USDC · <span class="badge">${s.status}</span></p><div class="payment-grid"><canvas id="qr" aria-label="QR da solicitação de pagamento Solana Pay"></canvas><div><strong>Pedido Solana Pay</strong><p>${test ? "Selecione Devnet na carteira antes de usar." : "Esta cobrança usa USDC real na Solana Mainnet."} O link não seleciona a rede na carteira. Confira rede, token, valor e destinatário.</p><button class="secondary" id="copy-payment">Copiar solicitação</button></div></div><dl class="invoice-details"><dt>Destinatário</dt><dd class="mono">${esc(i.recipient)}</dd><dt>Referência única</dt><dd class="mono">${esc(i.reference)}</dd><dt>Recebido / falta / excedente</dt><dd>${s.received} / ${s.outstanding} / ${s.excess} USDC</dd><dt>Contrato</dt><dd>${esc(i.contract || "Não informado")}</dd></dl><div class="pending-receipts">${(i.pendingSignatures || []).map((signature, index) => `<p>Pagamento importado, ainda não conferido: <button class="secondary" data-pending="${index}">${esc(short(signature))}</button></p>`).join("")}</div><form id="verify-form"><label>Assinatura da transação<input name="signature" placeholder="Cole a assinatura do pagamento" required autocomplete="off"></label><button class="primary">Verificar recebimento</button></form><p id="verify-result" role="status"></p><div class="receipts">${i.receipts.map((r) => `<p><a href="${explorerTx(i.chain, r.signature)}" target="_blank" rel="noreferrer">${short(r.signature)} ↗</a> · ${decimal(r.amount)} USDC · finalizada</p>`).join("")}</div><p class="subtle">A verificação confirma a entrada de USDC com esta referência. Não certifica comprador, contrato, qualidade ou entrega física.</p>`;
   $("#dialog").showModal();
   await QRCode.toCanvas($("#qr"), uri, {
     width: 190,
@@ -488,6 +519,9 @@ async function openInvoice(id) {
         "Solicitação copiada. Confira a rede antes de compartilhar.";
     }),
   );
+  document.querySelectorAll("[data-pending]").forEach(button => button.addEventListener("click", () => {
+    $("#verify-form input[name=signature]").value = i.pendingSignatures[Number(button.dataset.pending)];
+  }));
   $("#verify-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const button = e.submitter;
@@ -514,6 +548,7 @@ async function openInvoice(id) {
       )
         throw new Error("Esta transação já foi conciliada.");
       appendReceipt(state.invoices, id, receipt);
+      i.pendingSignatures = (i.pendingSignatures || []).filter(s => s !== signature);
       save();
       $("#dialog").close();
       render();
