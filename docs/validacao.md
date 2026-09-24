@@ -76,3 +76,5 @@ Essas lacunas não são preenchidas com simulações apresentadas como reais. A 
 30 testes automatizados aprovados. Os sete novos testes verificam que valores de comprovantes importados não quitam cobranças, saldos importados são ignorados, referências conflitantes rejeitam o arquivo sem alterar o estado, duplicatas são mescladas, comprovantes locais são preservados e limites/formato são aplicados. Compilação de produção aprovada.
 
 O teste completo em Devnet permanece pendente: a solicitação de 0,01 SOL de teste ao RPC oficial retornou erro interno (-32603) às 11:46 UTC. Não houve transferência.
+
+Interface local: seleção de arquivo, prévia, confirmação e mesclagem verificadas no navegador. A cobrança QA-RESTAURACAO-SEM-PAGAMENTO foi acrescentada com recebido zero e situação pendente; a cobrança e a carteira anteriores permaneceram presentes.
