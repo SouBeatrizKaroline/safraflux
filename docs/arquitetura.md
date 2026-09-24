@@ -57,7 +57,7 @@ Cada pool é distribuído proporcionalmente por maiores restos. Empates seguem a
 
 ## Estado e evolução
 
-O protótipo guarda registros apenas em `localStorage`, no mesmo dispositivo/origem. CSV e JSON permitem retirar os dados. Não há restauração JSON nesta versão, edição de cobranças, sincronização, controle de acesso, trilha inviolável ou uso concorrente suportado.
+O protótipo guarda registros apenas em `localStorage`, no mesmo dispositivo/origem. CSV e JSON permitem retirar os dados. A restauração JSON valida o arquivo e mescla registros; comprovantes importados exigem nova consulta à rede. Não há edição de cobranças, sincronização, controle de acesso, trilha inviolável ou uso concorrente suportado.
 
 Um piloto organizacional exigirá banco de dados e transações para a unicidade rede + assinatura; identidade e papéis; revisão de contratos/rateios; histórico de versões; anexos privados; importação/exportação; proteção de dados e integração contábil. Esses itens são trabalho futuro, não capacidades atuais.
 

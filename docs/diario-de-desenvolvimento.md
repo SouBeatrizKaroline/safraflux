@@ -43,3 +43,10 @@ Os commits intermediários preservam o andamento da pesquisa; apenas os recursos
 - Identificada falha externa na emissão do certificado TLS do endereço hospedado. Solicitada uma nova tentativa da versão já salva, preservando acesso privado.
 - Documentação atualizada para separar publicação do código, execução local e hospedagem online. Nenhum endereço foi apresentado como funcionando sem confirmação do serviço.
 - Nova tentativa concluída com sucesso. Link privado confirmado: https://safraflux.ebeatrizkcs.chatgpt.site . A falha de certificado foi superada sem alteração de código ou de permissões.
+
+## 24/09/2026 — restauração e tentativa de pagamento em Devnet
+
+- Tentativa única de obter 0,01 SOL de teste pelo RPC oficial da Devnet às 11:46 UTC retornou erro interno (-32603). Nenhum pagamento foi realizado; o teste completo continua pendente.
+- Implementada restauração JSON com prévia, validação, mesclagem sem substituir registros e rejeição de referências conflitantes.
+- Comprovantes importados viram assinaturas pendentes de nova verificação; valores recebidos e saldos do arquivo não são aceitos como evidência.
+- Sete testes adicionais cobrem adulteração, idempotência, preservação dos dados locais, formatos e limites. Total: 30 testes aprovados; compilação concluída.

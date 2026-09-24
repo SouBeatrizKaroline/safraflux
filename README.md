@@ -24,7 +24,7 @@ SafraFlux organiza essa etapa: reúne carteiras, cria cobranças identificadas n
 | Conciliação Solana | Assinatura informada pelo usuário; conferência de finalização, referência, destinatário, token e valor. Sem indexação automática. |
 | Pagamentos parciais | Pendente, parcial, recebido e acima do valor; a entrada só é registrada após verificação. |
 | Rateio por produtor | Base proporcional aos kg; prêmio proporcional a kg × pontos declarados; seis casas decimais e soma preservada. |
-| Exportação | CSV de cobranças/rateio e JSON dos registros. Importação/restauração não implementada. |
+| Exportação | CSV de cobranças/rateio; exportação e restauração JSON com prévia, mesclagem e nova verificação dos pagamentos. |
 | Pesquisa | Mercado, concorrentes, dez premiados, modelo comercial, riscos, arquitetura e plano de entrevistas. |
 
 **Fora desta versão:** custódia, envio de dinheiro, repasse automático, câmbio/Pix, compra de cripto, swaps, bridges, crédito, tokenização de safra, comprovação de entrega, login organizacional e sincronização.
@@ -181,7 +181,7 @@ Consultas reais somente leitura responderam nos cinco ambientes configurados. Os
 
 1. Validar a dor e a demanda por stablecoins com organizações e compradores.
 2. Demonstrar pagamento completo em Devnet com carteiras reais, parcelas e rejeições.
-3. Implementar backend, papéis, histórico, backups, restauração e uso concorrente.
+3. Implementar backend, papéis, histórico, backups automáticos e uso concorrente.
 4. Versionar regras de rateio, vincular documentos privados do prêmio e obter revisão contábil.
 5. Revisar enquadramento jurídico/fiscal/cambial com os prestadores envolvidos.
 6. Ampliar redes ou automatizar pagamentos somente com demanda e controles definidos.
@@ -197,3 +197,7 @@ Envios foram programados em intervalos aproximados de dois minutos durante o tra
 Nenhuma candidatura foi submetida. O [resumo em inglês](docs/project-brief-en.md) prepara a inscrição e deve ser revisto contra o formulário oficial. SafraFlux é um nome de trabalho; disponibilidade de marca não investigada.
 
 Código aberto sob [MIT](LICENSE). Contribuições: [CONTRIBUTING.md](CONTRIBUTING.md). Referências externas continuam pertencendo aos respectivos titulares.
+
+### Restaurar um backup
+
+Em **Configurações**, selecione o JSON exportado, confira a prévia e clique em **Importar registros validados**. A mesclagem preserva os registros existentes e rejeita conflitos de referência. Limites: 2 MB, 30 carteiras e 500 cobranças. Saldos e URLs de provedores não são importados. Assinaturas de pagamentos ficam pendentes: abra cada cobrança e consulte a rede novamente. O arquivo contém dados da operação; guarde-o em local privado.

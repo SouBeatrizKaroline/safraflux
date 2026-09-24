@@ -55,7 +55,7 @@ Inspeção no navegador local:
 
 - Conexão e autorização com extensões reais de Phantom, Solflare, Backpack, MetaMask ou outros fornecedores.
 - Pagamento completo via carteira externa, em Devnet ou Mainnet.
-- Uso simultâneo, restauração, backend, trilha de auditoria e operação institucional.
+- Uso simultâneo, backend, trilha de auditoria e operação institucional.
 - Conformidade regulatória, segurança independente e homologação contábil.
 - Entrevistas, demanda, preço, economia de tempo ou resultado comercial.
 
@@ -69,4 +69,10 @@ Essas lacunas não são preenchidas com simulações apresentadas como reais. A 
 - Empacotamento do site concluído e versão salva. O Windows exigiu disponibilizar o Bash do Git e configurar o tar para tratar caminhos de disco como locais.
 - A primeira publicação hospedada falhou por timeout de emissão de certificado TLS; não houve erro de aplicação nessa etapa. Em 24/09/2026 foi solicitada nova publicação da mesma versão, sem recriar o projeto ou alterar seu acesso privado.
 - Consulta real Devnet também confirmada pela interface no navegador: endereço descartável sem fundos, saldos zero obtidos da rede, sem transferências.
-- **Publicação confirmada em 24/09/2026 às 11:41:01 UTC:** https://safraflux.ebeatrizkcs.chatgpt.site . O serviço retornou estado `succeeded`, sem mensagem de falha. Acesso privado à proprietária; não é uma URL pública para avaliadores. A versão hospedada corresponde ao código funcional do commit `9d396fd`; commits posteriores apenas atualizam a documentação da entrega.
+- **Publicação confirmada em 24/09/2026 às 11:41:01 UTC:** https://safraflux.ebeatrizkcs.chatgpt.site . O serviço retornou estado `succeeded`, sem mensagem de falha. Acesso privado à proprietária; não é uma URL pública para avaliadores. A versão hospedada corresponde ao código funcional do commit `9d396fd`; esta foi a primeira versão hospedada. As alterações seguintes são registradas abaixo.
+
+## Restauração JSON — 24/09/2026
+
+30 testes automatizados aprovados. Os sete novos testes verificam que valores de comprovantes importados não quitam cobranças, saldos importados são ignorados, referências conflitantes rejeitam o arquivo sem alterar o estado, duplicatas são mescladas, comprovantes locais são preservados e limites/formato são aplicados. Compilação de produção aprovada.
+
+O teste completo em Devnet permanece pendente: a solicitação de 0,01 SOL de teste ao RPC oficial retornou erro interno (-32603) às 11:46 UTC. Não houve transferência.

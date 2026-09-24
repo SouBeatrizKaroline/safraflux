@@ -425,12 +425,19 @@ function bind() {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      if (file.size > MAX_BACKUP_BYTES) throw new Error("O backup deve ter até 2 MB.");
+      if (file.size > MAX_BACKUP_BYTES)
+        throw new Error("O backup deve ter até 2 MB.");
       const raw = await file.text();
       if (event.target.files?.[0] !== file) return;
       const result = mergeBackup(state, raw);
       pendingBackup = raw;
-      $("#restore-preview").textContent = result.walletsAdded + " carteira(s), " + result.invoicesAdded + " cobrança(s) e " + result.signaturesAdded + " assinatura(s) para conferir. Os registros atuais serão preservados.";
+      $("#restore-preview").textContent =
+        result.walletsAdded +
+        " carteira(s), " +
+        result.invoicesAdded +
+        " cobrança(s) e " +
+        result.signaturesAdded +
+        " assinatura(s) para conferir. Os registros atuais serão preservados.";
       $("#restore-confirm").disabled = false;
     } catch (error) {
       $("#restore-preview").textContent = error.message;
@@ -443,7 +450,9 @@ function bind() {
       localStorage.setItem(KEY, JSON.stringify(result.state));
       state = result.state;
       render();
-      notice("Backup importado. Abra as cobranças para conferir os pagamentos na rede.");
+      notice(
+        "Backup importado. Abra as cobranças para conferir os pagamentos na rede.",
+      );
     } catch (error) {
       $("#restore-preview").textContent = error.message;
     }
@@ -519,9 +528,12 @@ async function openInvoice(id) {
         "Solicitação copiada. Confira a rede antes de compartilhar.";
     }),
   );
-  document.querySelectorAll("[data-pending]").forEach(button => button.addEventListener("click", () => {
-    $("#verify-form input[name=signature]").value = i.pendingSignatures[Number(button.dataset.pending)];
-  }));
+  document.querySelectorAll("[data-pending]").forEach((button) =>
+    button.addEventListener("click", () => {
+      $("#verify-form input[name=signature]").value =
+        i.pendingSignatures[Number(button.dataset.pending)];
+    }),
+  );
   $("#verify-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const button = e.submitter;
@@ -548,7 +560,9 @@ async function openInvoice(id) {
       )
         throw new Error("Esta transação já foi conciliada.");
       appendReceipt(state.invoices, id, receipt);
-      i.pendingSignatures = (i.pendingSignatures || []).filter(s => s !== signature);
+      i.pendingSignatures = (i.pendingSignatures || []).filter(
+        (s) => s !== signature,
+      );
       save();
       $("#dialog").close();
       render();
