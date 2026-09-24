@@ -38,3 +38,7 @@ Solana is the proposed primary ecosystem. Secondary networks support balance rea
 Repository: https://github.com/SouBeatrizKaroline/safraflux
 
 This is a preparation brief, not a submitted application or confirmation of eligibility. Recheck the official form and rules before submission.
+
+## Implementation update — 24 September 2026
+
+The application now includes an authenticated Worker API, per-account D1 persistence, optimistic concurrency, append-only API audit events, the latest 20 recovery snapshots, producer and lot records, declared operational stages and saved allocation calculations. The private hosted version uses ChatGPT/Sites authentication. It does not yet provide shared organization roles. Full external-wallet payment validation was deferred; no commercial validation or independent security audit is claimed.

@@ -50,13 +50,13 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) {
-      if (!env.ASSETS)
-        return new Response("Assets unavailable", { status: 503 });
-      let response = await env.ASSETS.fetch(request);
-      if (response.status === 404 && ["/app", "/entrar"].includes(url.pathname))
-        response = await env.ASSETS.fetch(
-          new Request(new URL("/index.html", url), request),
-        );
+      const embedded=typeof __SAFRAFLUX_ASSETS__!=='undefined'?__SAFRAFLUX_ASSETS__:{};
+      const path=['/','/app','/app/','/entrar'].includes(url.pathname)?'/index.html':url.pathname;
+      const asset=Object.hasOwn(embedded,path)?embedded[path]:null;
+      let response;
+      if(asset)response=new Response(request.method==='HEAD'?null:asset.body,{headers:{'Content-Type':asset.type}});
+      else if(env.ASSETS)response=await env.ASSETS.fetch(request);
+      else response=new Response('Página não encontrada',{status:404});
       const h = new Headers(response.headers);
       for (const [key, value] of Object.entries(headers)) h.set(key, value);
       return new Response(response.body, {

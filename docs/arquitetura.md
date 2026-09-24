@@ -1,75 +1,42 @@
-# Arquitetura e decisões
+# Arquitetura do SafraFlux
 
-## Estrutura atual
+## Fluxo atual
 
-```text
-Interface no navegador
- ├─ Carteiras → RPC Solana/EVM → saldos por ativo e rede
- ├─ Cobranças locais → URI/QR Solana Pay → carteira do pagador
- ├─ Assinatura informada → RPC Solana → verificador → recebimento local
- └─ Quantidades + pontos + total → cálculo inteiro → memória de rateio/CSV
-```
+Navegador → autenticação do Sites → Worker → D1. O navegador consulta saldos públicos; o servidor confere recebimentos antes de registrá-los. Nenhuma chave privada é coletada e nenhum repasse é assinado.
 
-Não existe servidor de aplicação, contrato próprio, ponte ou custódia. As solicitações de conexão apenas obtêm endereços autorizados. A transmissão e assinatura de pagamentos ficam fora da aplicação; o QR é uma instrução de recebimento para a carteira do pagador.
+A página / apresenta a ferramenta. /app abre o painel. As rotas /signin-with-chatgpt e /signout-with-chatgpt pertencem à plataforma de autenticação, não são formulários de senha implementados pelo projeto. A política de acesso do site continua privada.
 
-| Arquivo | Responsabilidade |
-| --- | --- |
-| `src/main.js` | Interface, formulários, armazenamento local e exportações |
-| `src/chains.js` | Registro de redes, RPC, conexões e composição Solana Pay |
-| `src/domain.js` | Valores exatos, verificação de transferência e rateio |
-| `src/style.css` | Layout responsivo e estados visuais |
-| `tests/` | Casos de borda financeiros e falhas de integração |
-| `scripts/check-rpc.js` | Consulta real somente leitura, sem carteira pessoal |
+## Dados e autorização
 
-## Multicarteiras e multirredes
+O servidor usa o identificador estável encaminhado pelo Sites. Todas as consultas de registros, histórico e cópias filtram por esse titular. Cabeçalhos de identidade só são confiáveis atrás do dispatcher do Sites; expor o Worker diretamente sem uma camada que autentique e remova cabeçalhos enviados pelo cliente quebra essa fronteira de segurança.
 
-Solana Wallet Standard descobre extensões compatíveis, enquanto EIP-6963 descobre provedores EVM. Conectar não é requisito para consultar um endereço público. Uma conexão não prova identidade jurídica, propriedade da mercadoria nem autorização de uma cooperativa.
+- workspaces: estado operacional e revisão por titular.
+- events: revisão, tipo de operação, horário e SHA-256 do estado salvo. A API não oferece alteração ou exclusão de eventos.
+- snapshots: últimas 20 gravações por conta, para recuperar registros ausentes.
+- request_limits: contador por conta e minuto, com limite de 120 requisições.
 
-Solana Mainnet e Devnet têm mints diferentes. Base, Ethereum e Arbitrum usam USDC nativo da Circle, não versões bridged. SOL e ETH são exibidos em suas unidades. A soma de USDC é apenas quantidade de tokens nas carteiras principais consultadas; não é saldo bancário, disponibilidade de liquidez nem conversão garantida em dólar ou real.
+A operação verifica a revisão antes de gravar. A chave única titular + revisão no histórico, a atualização do estado e a cópia são executadas em um batch transacional. Concorrência gera conflito, preservando a primeira gravação. O digest não é uma assinatura independente e não protege contra um administrador do banco.
 
-## Verificação restritiva
+O estado tem limite de 2 MB; até 30 carteiras, 500 cobranças, 500 produtores, 500 lotes e 500 rateios. São limites operacionais explícitos, não um dimensionamento para grande volume. O histórico completo fica no banco; a interface mostra os últimos 100 eventos.
 
-A cobrança recebe referência aleatória de 32 bytes, sem criar chave privada persistente. Para aceitar a assinatura informada, o fluxo:
+## Operações
 
-1. Confere o hash de gênese da rede solicitada.
-2. Exige status `finalized` sem erro.
-3. Obtém a transação em JSON, preservando índices das instruções, inclusive contas carregadas por lookup table.
-4. Confere a assinatura retornada e a data, com tolerância de cinco minutos.
-5. Deriva a conta associada de USDC do destinatário.
-6. Localiza a referência não assinante/somente leitura na instrução SPL direta.
-7. Compara o valor identificado com o crédito líquido do mint/destinatário esperados.
-8. Impede repetição de rede + assinatura no estado local e recalcula pendência/excedente.
+A API aceita ações específicas, sem endpoint para substituir livremente o estado. Carteiras e cobranças recebem IDs no servidor. Cobranças não aceitam valores recebidos enviados pelo cliente. A conciliação confere finalized, gênese, assinatura, data, referência na instrução SPL, mint, ATA e crédito líquido. Provedores de conciliação são definidos no código para impedir destinos arbitrários de requisição do servidor.
 
-Transações complexas são rejeitadas para análise externa, sem botão para marcar artificialmente como pagas. Verificar recebimento não identifica a pessoa pagadora nem prova cumprimento do contrato.
+Lotes percorrem cadastrado → beneficiamento → pronto → expedido → entregue. Cancelamento é permitido antes da expedição. Essas etapas são declarações operacionais, sem certificação automática. Produtores podem ser arquivados. Rateios salvos conservam entradas, regra kg-quality-v1, resultados e origem do valor.
 
-## Rateio
+Base proporcional aos kg; prêmio proporcional a kg × pontos. Maiores restos preservam exatamente o total até seis casas. O servidor recalcula os resultados; não aceita linhas calculadas pelo cliente como autoridade.
 
-Se `T` é o total em unidades mínimas e `p` o percentual do prêmio:
+## Recuperação
 
-```text
-pool do prêmio = piso(T × p / 100)
-base = T − pool do prêmio
-peso base do produtor = kg do produtor
-peso do prêmio = kg × pontos declarados
-```
+Cada gravação cria uma cópia, retendo as últimas 20. Recuperar mescla registros ausentes; não reverte alterações atuais, não apaga registros e não transforma comprovantes importados em pagamentos verificados. Exporte JSON regularmente para ter uma cópia independente da infraestrutura. O histórico de eventos não é importado como histórico autêntico.
 
-Cada pool é distribuído proporcionalmente por maiores restos. Empates seguem a ordem informada. O algoritmo conserva exatamente `T`; o arredondamento do pool ocorre em uma unidade mínima de USDC (0,000001). Pontos não são nota SCA nem certificação automática: o contrato deve definir seu significado. Despesas, descontos e tributos não são deduzidos automaticamente.
+A migração da versão antiga é uma ação explícita em Configurações. A cópia local original permanece intacta. Preferências de RPC ficam no navegador; dados operacionais ficam no servidor.
 
-## Estado e evolução
+## Execução local
 
-O protótipo guarda registros apenas em `localStorage`, no mesmo dispositivo/origem. CSV e JSON permitem retirar os dados. A restauração JSON valida o arquivo e mescla registros; comprovantes importados exigem nova consulta à rede. Não há edição de cobranças, sincronização, controle de acesso, trilha inviolável ou uso concorrente suportado.
+npm run dev:test utiliza SQLite real em .local/ e uma identidade explicitamente de teste. O adaptador remove os cabeçalhos de identidade recebidos do cliente e escuta somente loopback. npm run dev não atribui identidade e a API responde 401. Não exponha o servidor de desenvolvimento na internet.
 
-Um piloto organizacional exigirá banco de dados e transações para a unicidade rede + assinatura; identidade e papéis; revisão de contratos/rateios; histórico de versões; anexos privados; importação/exportação; proteção de dados e integração contábil. Esses itens são trabalho futuro, não capacidades atuais.
+## Limites restantes
 
-## Fontes técnicas
-
-- [Circle — endereços oficiais de USDC](https://developers.circle.com/stablecoins/usdc-contract-addresses)
-- [Solana Pay — especificação](https://docs.solanapay.com/spec)
-- [Solana — getTransaction](https://solana.com/docs/rpc/http/gettransaction)
-- [Solana — getSignatureStatuses](https://solana.com/docs/rpc/http/getsignaturestatuses)
-- [Solana — getGenesisHash](https://solana.com/docs/rpc/http/getgenesishash)
-- [Solana Kit — derivação de endereço](https://www.solanakit.com/api/functions/getProgramDerivedAddress)
-- [Wallet Standard](https://github.com/wallet-standard/wallet-standard)
-- [EIP-6963](https://eips.ethereum.org/EIPS/eip-6963)
-
-Consultadas em 23/09/2026. Endereços e respostas de rede foram conferidos também por consultas RPC somente leitura.
+Não há espaço compartilhado entre funcionários, papéis de aprovação, anexos privados, integração contábil, câmbio, custódia ou transferência automática. A primeira publicação com banco precisa ser conferida na plataforma; testes locais de autenticação não substituem a autenticação hospedada. Pagamento externo completo foi adiado a pedido da proponente. Revisão independente de segurança e validação comercial permanecem necessárias.

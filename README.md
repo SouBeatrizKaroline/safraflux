@@ -6,11 +6,11 @@ Uma cooperativa vende um lote formado pela produção de várias famílias. O co
 
 SafraFlux organiza essa etapa: reúne carteiras, cria cobranças identificadas na Solana, verifica recebimentos e calcula a memória do rateio. O recorte inicial são **cooperativas e pequenas exportadoras de café especial**.
 
-**Estágio:** protótipo funcional de pesquisa e demonstração, iniciado em 23/09/2026. Consultas de rede são reais; exemplos de rateio são opcionais e identificados. Não há cliente, entrevista, parceria, piloto comercial ou economia comprovada. O produto ainda não está homologado para operação financeira de uma organização.
+**Estágio:** aplicação com interface, servidor e persistência por conta, iniciada em 23/09/2026. A operação agrícola funciona sem depender de pagamento em cripto: cadastros, etapas, rateios salvos, histórico e recuperação. Consultas de rede são reais; exemplos são opcionais e identificados. Não há cliente, entrevista, parceria ou piloto comercial comprovado. Pagamento completo com carteira externa e revisão independente de segurança continuam pendentes.
 
 [Pesquisa de mercado](docs/pesquisa-de-mercado.md) · [Hackathon e premiados](docs/hackathon-e-benchmarks.md) · [Arquitetura](docs/arquitetura.md) · [Validação](docs/validacao.md) · [Diário](docs/diario-de-desenvolvimento.md)
 
-**Acesso:** [abrir o protótipo hospedado](https://safraflux.ebeatrizkcs.chatgpt.site) — acesso privado à conta proprietária, com publicação confirmada em 24/09/2026. Código e documentação são públicos neste repositório, com [verificações automatizadas](https://github.com/SouBeatrizKaroline/safraflux/actions). Para avaliar sem acesso à hospedagem privada, siga a execução local abaixo.
+**Acesso:** [abrir o SafraFlux](https://safraflux.ebeatrizkcs.chatgpt.site) — acesso privado à conta proprietária, com publicação confirmada em 24/09/2026. Código e documentação são públicos neste repositório, com [verificações automatizadas](https://github.com/SouBeatrizKaroline/safraflux/actions). Para avaliar sem acesso à hospedagem privada, siga a execução local abaixo.
 
 ## 1. O que está entregue
 
@@ -25,9 +25,12 @@ SafraFlux organiza essa etapa: reúne carteiras, cria cobranças identificadas n
 | Pagamentos parciais | Pendente, parcial, recebido e acima do valor; a entrada só é registrada após verificação. |
 | Rateio por produtor | Base proporcional aos kg; prêmio proporcional a kg × pontos declarados; seis casas decimais e soma preservada. |
 | Exportação | CSV de cobranças/rateio; exportação e restauração JSON com prévia, mesclagem e nova verificação dos pagamentos. |
+| Acesso e dados | Login do ChatGPT no site privado; dados separados por conta, banco D1 e controle de revisão contra sobrescritas. |
+| Operação agrícola | Cadastro de produtores e lotes; etapas declaradas; rateios persistidos e exportáveis. |
+| Recuperação | Histórico de gravações e cópias automáticas das últimas 20 revisões; recuperação por mesclagem, sem apagar o estado atual. |
 | Pesquisa | Mercado, concorrentes, dez premiados, modelo comercial, riscos, arquitetura e plano de entrevistas. |
 
-**Fora desta versão:** custódia, envio de dinheiro, repasse automático, câmbio/Pix, compra de cripto, swaps, bridges, crédito, tokenização de safra, comprovação de entrega, login organizacional e sincronização.
+**Fora desta versão:** custódia, envio de dinheiro, repasse automático, câmbio/Pix, compra de cripto, swaps, bridges, crédito, tokenização de safra, comprovação de entrega, equipes com papéis compartilhados e login corporativo externo.
 
 Aqui, **“juntar criptomoedas” significa reunir a visão de carteiras e recebimentos**. Os fundos continuam nos endereços de origem. Não são movidos para uma carteira única; moedas diferentes não são somadas como se tivessem o mesmo valor.
 
@@ -107,17 +110,19 @@ Requisitos: **Node.js 24 LTS**, npm e navegador atualizado. O rateio pode ser te
 git clone https://github.com/SouBeatrizKaroline/safraflux.git
 cd safraflux
 npm ci
-npm run dev
+npm run dev:test
 ```
 
-Abra o endereço indicado, normalmente `http://127.0.0.1:4173/`.
+Abra `http://127.0.0.1:4173/` para a apresentação e `/app` para a operação. `dev:test` habilita explicitamente uma identidade local de teste e grava SQLite em `.local/`, ignorado pelo Git. Não é login de produção. `npm run dev` mantém a API sem identidade e recusa acesso aos dados; na hospedagem, a identidade vem da autenticação do Sites.
 
 1. Em **Rateio por produtor**, escolha **Preencher exemplo fictício** e calcule.
 2. Em **Carteiras**, adicione um endereço público e a rede. A conexão é facultativa e depende da extensão instalada no navegador.
 3. Em **Lotes e cobranças**, informe lote, valor, rede e destinatário. Use Devnet para avaliação. Criar o QR não transfere fundos.
 4. Depois de um pagamento realizado pelo usuário, informe a assinatura. Somente transações aceitas pelo verificador alteram o recebido.
 5. No rateio, selecione a cobrança para usar seu valor recebido ou informe um valor manual, identificado como não comprovado.
-6. Exporte CSV/JSON. Registros ficam apenas nesse navegador/origem.
+6. Salve o rateio, consulte a Operação agrícola e exporte CSV/JSON. Os registros vêm do servidor.
+7. Cadastre produtores e lotes em **Operação agrícola**. Avance etapas declaradas e crie a cobrança a partir do lote.
+8. Em **Configurações**, consulte cópias automáticas ou importe os registros da versão antiga.
 
 **Solana Pay não seleciona o cluster no URI.** O pagador precisa escolher a rede na carteira e conferir mint, valor e destinatário. Tokens Devnet não têm valor financeiro.
 
@@ -137,7 +142,7 @@ flowchart LR
 
 O verificador confere rede, status `finalized`, sucesso, assinatura, data, mint e destinatário. A referência deve estar na própria instrução SPL como conta não assinante/somente leitura. O destino deve ser a conta associada de USDC e o crédito líquido deve corresponder à transferência identificada.
 
-A mesma assinatura não é aceita novamente na mesma rede dentro do estado local. Swaps, instruções internas e movimentos adicionais no destino são rejeitados. Não há botão para marcar artificialmente uma cobrança como paga. A verificação **não comprova identidade jurídica, qualidade, origem, certificação, entrega física ou quitação jurídica do contrato**.
+A mesma assinatura não é aceita novamente na mesma rede dentro da conta no servidor. Swaps, instruções internas e movimentos adicionais no destino são rejeitados. Não há botão para marcar artificialmente uma cobrança como paga. A verificação **não comprova identidade jurídica, qualidade, origem, certificação, entrega física ou quitação jurídica do contrato**.
 
 ### Regra do rateio
 
@@ -151,19 +156,23 @@ Despesas, descontos, tributos e regras contratuais diferentes não são processa
 
 ## 8. Arquitetura e limites
 
-Aplicação estática em JavaScript/Vite, com Solana Kit (`@solana/addresses`), Wallet Standard, `bs58` e QR. O núcleo monetário usa `BigInt`. Não há contrato inteligente próprio; são usados os programas de tokens existentes.
+A interface usa JavaScript/Vite, Solana Kit, Wallet Standard e QR. Um servidor compatível com Cloudflare Workers executa autorização, validação e persistência em D1. O núcleo monetário usa BigInt. Não há contrato inteligente próprio, custódia ou assinatura de transferências.
 
-```text
-src/domain.js     valores, rateio e validação de transferência
-src/chains.js     redes, RPC, endereços e conexão
-src/main.js       interface, registros locais e exportação
-tests/           casos positivos e negativos
-docs/            pesquisa, decisões, validação e diário
-```
+| Pasta | Responsabilidade |
+| --- | --- |
+| src/ | Interface, rede, cálculo e validação compartilhada |
+| server/ | API, autorização por conta, operações, transações e histórico |
+| db/ e drizzle/ | Esquema e migrações versionadas |
+| scripts/ | Compilação, SQLite local e consultas de diagnóstico |
+| tests/ | Regras financeiras, autorização, concorrência e recuperação |
 
-O estado em `localStorage` pode ser alterado por quem controla o dispositivo. Não há histórico inviolável, recuperação automática, autenticação ou coordenação entre abas. Um piloto organizacional exige backend e unicidade transacional. Use uma aba por conjunto de registros. Consulte [arquitetura](docs/arquitetura.md) e [segurança](SECURITY.md).
+Frontend e backend permanecem no mesmo repositório para publicar versões compatíveis. Cada gravação valida a revisão carregada e atualiza dados, histórico e cópia de recuperação na mesma transação. Uma segunda sessão desatualizada recebe conflito; não sobrescreve o primeiro salvamento. Recarregar ou **Atualizar dados do servidor** busca a revisão atual.
 
-A aplicação não pede seed, armazena chave privada ou assina transferências. A consulta depende de um RPC confiável; não é prova criptográfica independente. Códigos de lote/contrato não devem conter dados pessoais ou segredos comerciais.
+O login identifica a pessoa; não certifica uma organização. Hoje cada conta possui seus próprios registros. Não há compartilhamento de uma operação entre funcionários com papéis de aprovação. O site permanece privado à proprietária, inclusive a página de apresentação. Abertura ao público exige uma decisão explícita de acesso.
+
+As assinaturas são conferidas no servidor, usando provedores definidos no código; URLs fornecidas pelo cliente não são usadas para conciliação. Preferências de RPC para consulta de saldo continuam locais. O histórico não pode ser alterado pela API, mas administradores da infraestrutura ainda controlam o banco: não é um registro inviolável ou uma auditoria independente.
+
+Consulte [arquitetura](docs/arquitetura.md), [segurança](SECURITY.md) e [operação e recuperação](docs/operacao.md).
 
 ## 9. Testes e evidências
 
@@ -181,8 +190,8 @@ Consultas reais somente leitura responderam nos cinco ambientes configurados. Os
 
 1. Validar a dor e a demanda por stablecoins com organizações e compradores.
 2. Demonstrar pagamento completo em Devnet com carteiras reais, parcelas e rejeições.
-3. Implementar backend, papéis, histórico, backups automáticos e uso concorrente.
-4. Versionar regras de rateio, vincular documentos privados do prêmio e obter revisão contábil.
+3. Ampliar o acesso para organizações com convites, papéis e aprovação de operações, após definir os usuários e responsabilidades do piloto.
+4. Vincular documentos privados do prêmio e obter revisão contábil; a regra atual já é preservada como kg-quality-v1 em cada rateio salvo.
 5. Revisar enquadramento jurídico/fiscal/cambial com os prestadores envolvidos.
 6. Ampliar redes ou automatizar pagamentos somente com demanda e controles definidos.
 
@@ -200,4 +209,4 @@ Código aberto sob [MIT](LICENSE). Contribuições: [CONTRIBUTING.md](CONTRIBUTI
 
 ### Restaurar um backup
 
-Em **Configurações**, selecione o JSON exportado, confira a prévia e clique em **Importar registros validados**. A mesclagem preserva os registros existentes e rejeita conflitos de referência. Limites: 2 MB, 30 carteiras e 500 cobranças. Saldos e URLs de provedores não são importados. Assinaturas de pagamentos ficam pendentes: abra cada cobrança e consulte a rede novamente. O arquivo contém dados da operação; guarde-o em local privado.
+Em **Configurações**, selecione o JSON exportado, confira a prévia e clique em **Importar registros validados**. A mesclagem no servidor preserva os registros existentes e rejeita conflitos de referência. Limites: 2 MB, 30 carteiras e 500 cobranças. Saldos e URLs de provedores não são importados. Assinaturas de pagamentos ficam pendentes: abra cada cobrança e consulte a rede novamente. O arquivo contém dados da operação; guarde-o em local privado.

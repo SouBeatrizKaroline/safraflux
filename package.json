@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build && node scripts/build-server.js",
+    "build": "node scripts/clean-build.js && vite build && node scripts/build-server.js",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/*.test.js",
     "check": "npm test && npm run build",

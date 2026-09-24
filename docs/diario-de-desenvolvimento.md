@@ -52,3 +52,9 @@ Os commits intermediários preservam o andamento da pesquisa; apenas os recursos
 - Sete testes adicionais cobrem adulteração, idempotência, preservação dos dados locais, formatos e limites. Total: 30 testes aprovados; compilação concluída.
 
 - Restauração conferida na interface e publicada no site privado às 11:58 UTC. GitHub atualizado durante o trabalho; CI da versão hospedada aprovado.
+
+## 24/09/2026 — aplicação com servidor
+
+A pedido da proponente, o teste de pagamento foi adiado. Foram implementados servidor autenticado, persistência por conta, revisão transacional, histórico, cópias automáticas, produtores, lotes, etapas e rateios salvos. Frontend e backend permanecem separados em pastas no mesmo repositório para publicação conjunta. A página inicial apresenta o produto e encaminha à autenticação real da hospedagem. Não foi criado um formulário de senha fictício.
+
+A execução sofreu uma interrupção de limite da revisão automática de permissões; a migração bloqueada foi retomada e gerada depois. Nenhum bloqueio foi tratado como evidência de segurança do código. Testes de segurança e recuperação passaram; validação hospedada segue registrada no documento de validação.

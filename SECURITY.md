@@ -1,36 +1,40 @@
-# Segurança e limites operacionais
+# Segurança
 
-## Reportar um problema
+## Reportar uma vulnerabilidade
 
-Use a comunicação privada de vulnerabilidades do GitHub quando habilitada em **Security → Report a vulnerability**. Se ela não estiver disponível, abra uma issue pedindo um canal privado, sem publicar credenciais, dados pessoais, endereços de clientes ou instruções de exploração.
+Use Security → Report a vulnerability no GitHub. Não publique credenciais, dados de clientes ou instruções de exploração em issues públicas.
 
-## Modelo desta versão
+## Fronteiras de confiança
 
-- Aplicação estática, sem backend, conta de usuário, cofre, chave privada ou assinatura de transferências.
-- O estado é local ao navegador. Não é um livro contábil auditável nem uma base autoritativa de uma organização.
-- Quem tem acesso ao dispositivo/armazenamento pode alterar os registros. Não há proteção contra adulteração local nem autenticação dos cadastros comerciais.
-- A verificação consulta um RPC. Um provedor malicioso pode fornecer dados falsos. A conferência do identificador da rede evita enganos de configuração, mas não substitui uma fonte confiável.
-- Considere esta versão para avaliação técnica. Não há auditoria independente ou homologação comercial.
+O site privado usa autenticação do Sites/ChatGPT. O Worker confia no identificador de usuário inserido pelo dispatcher da plataforma; não deve ser publicado diretamente em outro endereço sem uma camada de autenticação equivalente que remova cabeçalhos forjados. Não existem senhas ou chaves de carteira no banco do SafraFlux.
+
+Dados são separados por conta. Todas as leituras, gravações, consultas de histórico e recuperações usam o titular autenticado. O projeto ainda não implementa organizações compartilhadas ou papéis de funcionários.
 
 ## Controles implementados
 
-1. Validação de formato de endereços; identificador da rede EVM e hash de gênese Solana.
-2. Lista explícita de contratos USDC publicada pela Circle; tokens arbitrários e USDC.e não são incluídos.
-3. Confirmação Solana `finalized`, transação bem-sucedida, assinatura consultada, data e referência.
-4. A referência precisa ser não assinante, somente leitura e parte da própria instrução SPL Transfer/TransferChecked.
-5. Destino precisa ser a conta associada do destinatário para o mint correto; o crédito líquido deve corresponder às transferências identificadas.
-6. Mesma assinatura não pode ser conciliada duas vezes na mesma rede dentro do estado carregado da aplicação.
-7. Valores e rateios usam inteiros; nenhuma taxa ou ganho é inventado quando o provedor falha.
-8. Conteúdo de formulário é escapado ao renderizar; exportação CSV trata separadores, aspas e prefixos de fórmulas.
+- API recusa identidade ausente, métodos não suportados e operações desconhecidas.
+- Escritas exigem origem exata, JSON e cabeçalho próprio; não há CORS permissivo.
+- Limite de corpo por streaming, tamanho de registros e frequência por conta.
+- Consultas SQL parametrizadas e transação para estado, revisão, histórico e cópia.
+- Conflitos de revisão impedem sobrescrita silenciosa entre sessões.
+- Valores de comprovantes enviados pelo cliente não são aceitos. Conferência de rede acontece no servidor com provedores fixos.
+- Importação valida dados, preserva registros atuais e exige nova conferência dos pagamentos.
+- Conteúdo é escapado na interface; CSV protege contra prefixos de fórmulas.
+- Política de conteúdo sem scripts inline, nosniff, no-referrer, no-store e restrição de câmera, microfone e geolocalização.
+- Cópias automáticas das últimas 20 gravações; exportação independente em JSON.
 
-## Limitações que afetam a operação
+## Riscos e limites
 
-- Não usar várias abas/dispositivos como sistema concorrente de registro. Não há coordenação transacional ou unicidade distribuída; um backend será necessário antes de um piloto com equipe.
-- Valores persistidos podem ficar desatualizados. Confira o horário e atualize a consulta antes de decidir.
-- A conciliação aceita transferências SPL diretas; roteadores, instruções internas/CPI, swaps, tokens 2022 e transações com movimentos adicionais no destino não são suportados.
-- Tolerância de cinco minutos na data protege contra pequenas diferenças no relógio do dispositivo. A referência aleatória é a principal ligação à cobrança.
-- Pagamento por QR/link não escolhe a rede no aplicativo da carteira. O destinatário deve informar a rede; o pagador deve confirmá-la.
-- Não publicar dados pessoais, documentos de contrato ou coordenadas de propriedades na blockchain. O protótipo usa apenas códigos comerciais.
-- URLs RPC personalizadas ficam no armazenamento local e são utilizadas pelo navegador. Não colocar segredos de servidor ou credenciais de custódia nessas URLs.
+Um RPC malicioso ainda pode mentir. A consulta não é uma prova criptográfica independente. Não há consenso entre múltiplos provedores. A política de conexão permite HTTPS para RPCs personalizados no navegador; URLs personalizadas nunca são usadas pelo servidor para conciliação.
 
-Antes de uso comercial: backend com autenticação e papéis, trilha imutável de alterações, deduplicação transacional, backups/recuperação, múltiplas fontes RPC, testes com carteiras reais, avaliação jurídica e revisão independente de segurança.
+O histórico é protegido pela API, não contra administradores da infraestrutura. Cópias no mesmo banco não protegem contra perda da infraestrutura inteira: mantenha exportações externas privadas. O JSON pode conter nomes e dados da operação; não o envie a repositórios públicos.
+
+Não houve auditoria independente, pentest externo ou homologação regulatória. Os testes automatizados cobrem casos definidos e não provam ausência de vulnerabilidades. A conexão com extensões e o pagamento completo permanecem pendentes. Não há custódia, repasse automático ou certificação de entrega.
+
+## Referências
+
+- [OWASP: segurança de APIs REST](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html)
+- [OWASP: prevenção de CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
+- [OWASP: prevenção de SSRF](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html)
+
+Aplicação dos controles não equivale a certificação OWASP.
