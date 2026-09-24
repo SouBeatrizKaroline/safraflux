@@ -10,7 +10,7 @@ SafraFlux organiza essa etapa: reúne carteiras, cria cobranças identificadas n
 
 [Pesquisa de mercado](docs/pesquisa-de-mercado.md) · [Hackathon e premiados](docs/hackathon-e-benchmarks.md) · [Arquitetura](docs/arquitetura.md) · [Validação](docs/validacao.md) · [Diário](docs/diario-de-desenvolvimento.md)
 
-**Disponibilidade:** código e documentação publicados neste repositório público, com [verificações automatizadas](https://github.com/SouBeatrizKaroline/safraflux/actions). A execução local está disponível pelas instruções abaixo. A publicação hospedada está em verificação: a primeira tentativa falhou na emissão do certificado TLS pelo serviço, sem falha de build ou de testes do aplicativo. O endereço online só será divulgado depois da confirmação de publicação.
+**Acesso:** [abrir o protótipo hospedado](https://safraflux.ebeatrizkcs.chatgpt.site) — acesso privado à conta proprietária, com publicação confirmada em 24/09/2026. Código e documentação são públicos neste repositório, com [verificações automatizadas](https://github.com/SouBeatrizKaroline/safraflux/actions). Para avaliar sem acesso à hospedagem privada, siga a execução local abaixo.
 
 ## 1. O que está entregue
 

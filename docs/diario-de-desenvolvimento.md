@@ -42,3 +42,4 @@ Os commits intermediários preservam o andamento da pesquisa; apenas os recursos
 - Confirmado que a versão funcional está sincronizada com o GitHub e tem CI aprovado.
 - Identificada falha externa na emissão do certificado TLS do endereço hospedado. Solicitada uma nova tentativa da versão já salva, preservando acesso privado.
 - Documentação atualizada para separar publicação do código, execução local e hospedagem online. Nenhum endereço foi apresentado como funcionando sem confirmação do serviço.
+- Nova tentativa concluída com sucesso. Link privado confirmado: https://safraflux.ebeatrizkcs.chatgpt.site . A falha de certificado foi superada sem alteração de código ou de permissões.
