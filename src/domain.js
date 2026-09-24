@@ -1,3 +1,6 @@
+import bs58 from 'bs58';
+export const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+
 export function units(value, decimals = 6) {
   const raw = String(value).trim().replace(',', '.');
   if (!/^\d+(\.\d+)?$/.test(raw)) throw new Error('Use um valor positivo, sem separador de milhar.');
@@ -53,21 +56,49 @@ export function invoiceStatus(invoice) {
 }
 
 // A reference binds the on-chain receipt to an invoice; it is not proof of goods or quality.
-export function receiptFromTransaction(tx, invoice, signature, mint) {
+export function receiptFromTransaction(tx, invoice, signature, mint, destinationATA) {
   if (!tx || !tx.meta || tx.meta.err) throw new Error('Transação ausente ou sem execução bem-sucedida.');
-  const keys = tx.transaction.message.accountKeys.map(k => typeof k === 'string' ? k : String(k.pubkey));
-  if (!keys.includes(invoice.reference)) throw new Error('A transação não contém a referência desta cobrança.');
+  if (tx.transaction.signatures[0] !== signature) throw new Error('A assinatura retornada não corresponde à consulta.');
+  const message = tx.transaction.message;
+  const staticKeys = message.accountKeys;
+  const loaded = tx.meta.loadedAddresses || {writable: [], readonly: []};
+  const keys = [...staticKeys, ...loaded.writable, ...loaded.readonly];
+  const referenceIndex = keys.indexOf(invoice.reference);
+  if (referenceIndex < 0) throw new Error('A transação não contém a referência desta cobrança.');
+  const header = message.header;
+  const readOnly = referenceIndex < staticKeys.length
+    ? referenceIndex >= header.numRequiredSignatures && referenceIndex >= staticKeys.length - header.numReadonlyUnsignedAccounts
+    : referenceIndex >= staticKeys.length + loaded.writable.length;
+  if (!readOnly) throw new Error('A referência precisa ser somente leitura e não assinante.');
   if (!tx.blockTime || tx.blockTime * 1000 < Date.parse(invoice.createdAt) - 300000) throw new Error('A transação é anterior à cobrança ou não possui data verificável.');
-  const balance = list => (list || []).filter(b => b.mint === mint && b.owner === invoice.recipient).reduce((sum, b) => {
+  const destinationIndex = keys.indexOf(destinationATA);
+  if (destinationIndex < 0) throw new Error('A conta USDC de destino não está nesta transação.');
+  let transferred = 0n;
+  for (const instruction of message.instructions) {
+    if (keys[instruction.programIdIndex] !== TOKEN_PROGRAM) continue;
+    const data = bs58.decode(instruction.data);
+    const checked = data[0] === 12 && data.length === 10;
+    const transfer = data[0] === 3 && data.length === 9;
+    if (!checked && !transfer) continue;
+    const accounts = instruction.accounts;
+    const to = accounts[checked ? 2 : 1];
+    const refs = accounts.slice(checked ? 4 : 3);
+    if (to !== destinationIndex || !refs.includes(referenceIndex)) continue;
+    if (checked && (keys[accounts[1]] !== mint || data[9] !== 6)) throw new Error('Token ou precisão incorretos na transferência.');
+    transferred += new DataView(data.buffer, data.byteOffset, data.byteLength).getBigUint64(1, true);
+  }
+  if (transferred <= 0n) throw new Error('Não há transferência SPL direta para o destino com a referência desta cobrança.');
+  const balance = list => (list || []).filter(b => b.accountIndex === destinationIndex && b.mint === mint && b.owner === invoice.recipient).reduce((sum, b) => {
     if (b.uiTokenAmount.decimals !== 6) throw new Error('Precisão do token diferente do USDC esperado.');
     return sum + BigInt(b.uiTokenAmount.amount);
   }, 0n);
   const amount = balance(tx.meta.postTokenBalances) - balance(tx.meta.preTokenBalances);
   if (amount <= 0n) throw new Error('Não houve entrada líquida de USDC no destinatário desta cobrança.');
+  if (amount !== transferred) throw new Error('A transação contém movimentações adicionais no destino. Use uma transferência direta por cobrança.');
   return {signature, amount: amount.toString(), blockTime: tx.blockTime, verifiedAt: new Date().toISOString()};
 }
 
 export function csv(rows) {
-  const escape = v => '"' + String(v ?? '').replace(/^[=+@\-\t\r]/, "'$&").replaceAll('"', '""') + '"';
+  const escape = v => { const raw = String(v ?? ''); return '"' + (/^\s*[=+@\-\t\r]/.test(raw) ? "'" : '') + raw.replaceAll('"', '""') + '"'; };
   return '\uFEFF' + rows.map(r => r.map(escape).join(';')).join('\r\n');
 }

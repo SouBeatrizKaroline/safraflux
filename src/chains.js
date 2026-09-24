@@ -1,6 +1,6 @@
-import {Connection, Keypair, PublicKey} from '@solana/web3.js';
+import {isAddress, getAddressDecoder, getAddressEncoder, getProgramDerivedAddress} from '@solana/addresses';
 import {getWallets} from '@wallet-standard/app';
-import {receiptFromTransaction} from './domain.js';
+import {receiptFromTransaction, TOKEN_PROGRAM} from './domain.js';
 
 export const CHAINS = {
   'solana-mainnet': {name: 'Solana', family: 'solana', rpc: 'https://api.mainnet-beta.solana.com', symbol: 'SOL', decimals: 9, mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', explorer: 'https://explorer.solana.com'},
@@ -14,7 +14,8 @@ export function validateAddress(chain, address) {
   if (!CHAINS[chain]) throw new Error('Rede não suportada.');
   const value = address.trim();
   if (CHAINS[chain].family === 'solana') {
-    try { return new PublicKey(value).toBase58(); } catch { throw new Error('Endereço Solana inválido.'); }
+    if (!isAddress(value)) throw new Error('Endereço Solana inválido.');
+    return value;
   }
   if (!/^0x[0-9a-fA-F]{40}$/.test(value)) throw new Error('Endereço EVM inválido: use 0x seguido de 40 caracteres hexadecimais.');
   return value.toLowerCase();
@@ -50,7 +51,13 @@ export async function balances(wallet, endpoints = {}) {
   return {native: BigInt(native).toString(), usdc: BigInt(usdc).toString(), at: new Date().toISOString()};
 }
 
-export function createReference() { return Keypair.generate().publicKey.toBase58(); }
+export function createReference() { return getAddressDecoder().decode(crypto.getRandomValues(new Uint8Array(32))); }
+
+export async function associatedTokenAddress(owner, mint) {
+  const encoder = getAddressEncoder();
+  const [ata] = await getProgramDerivedAddress({programAddress: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL', seeds: [encoder.encode(owner), encoder.encode(TOKEN_PROGRAM), encoder.encode(mint)]});
+  return ata;
+}
 
 export function paymentURI(invoice) {
   const chain = CHAINS[invoice.chain];
@@ -65,8 +72,9 @@ export async function verifyReceipt(invoice, signature, endpoints = {}) {
   const endpoint = endpoints[invoice.chain] || chain.rpc;
   const status = await rpc(endpoint, 'getSignatureStatuses', [[signature], {searchTransactionHistory: true}]);
   if (status.value[0]?.confirmationStatus !== 'finalized' || status.value[0]?.err) throw new Error('A transação ainda não está finalizada com sucesso nesta rede.');
-  const tx = await rpc(endpoint, 'getTransaction', [signature, {encoding: 'jsonParsed', commitment: 'finalized', maxSupportedTransactionVersion: 0}]);
-  return receiptFromTransaction(tx, invoice, signature, chain.mint);
+  const tx = await rpc(endpoint, 'getTransaction', [signature, {encoding: 'json', commitment: 'finalized', maxSupportedTransactionVersion: 0}]);
+  const ata = await associatedTokenAddress(invoice.recipient, chain.mint);
+  return receiptFromTransaction(tx, invoice, signature, chain.mint, ata);
 }
 
 export function solanaWallets() {
