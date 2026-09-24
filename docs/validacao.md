@@ -86,3 +86,11 @@ Nova publicação confirmada em 24/09/2026 às 11:58:23 UTC: restauração dispo
 39 testes aprovados: incluem isolamento entre contas, recusa de anônimos e origem externa, SQL parametrizado, revisão concorrente, limites de frequência e corpo, cálculo no servidor e retenção/isolamento das cópias. Testes usam SQLite real em memória e identidades de teste; não são login real de usuários externos.
 
 Interface local: produtor cadastrado, lote criado, etapa avançada, rateio salvo e recarga com recuperação dos dados pelo banco. Valores de teste não representam transações. Pagamento em Devnet adiado a pedido da proponente. A publicação com D1 será registrada separadamente após confirmação.
+
+## Publicação do backend
+
+Publicação privada confirmada em 24/09/2026 às 19:15:24 UTC. Código hospedado: 508ed93dbf80360043976d4d4e4aebe3d7fcd71e. [CI aprovado](https://github.com/SouBeatrizKaroline/safraflux/actions/runs/36046680802). A publicação incluiu Worker, interface e migrações D1; o serviço retornou succeeded sem falha.
+
+Diagnóstico sem identidade pessoal: state, history e backups responderam 401, recusando acesso. O token técnico de acesso do publicador não foi tratado como identidade de usuário. No navegador, a entrada chegou à seleção de conta do ChatGPT; a seleção foi interrompida pela revisão automática por exigir autorização específica para compartilhar perfil. A leitura autenticada do banco hospedado ainda não foi confirmada nesta etapa.
+
+Inspeção local adicional: histórico, listagem de cópias e página de apresentação conferidos na interface.

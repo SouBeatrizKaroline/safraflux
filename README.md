@@ -210,3 +210,7 @@ Código aberto sob [MIT](LICENSE). Contribuições: [CONTRIBUTING.md](CONTRIBUTI
 ### Restaurar um backup
 
 Em **Configurações**, selecione o JSON exportado, confira a prévia e clique em **Importar registros validados**. A mesclagem no servidor preserva os registros existentes e rejeita conflitos de referência. Limites: 2 MB, 30 carteiras e 500 cobranças. Saldos e URLs de provedores não são importados. Assinaturas de pagamentos ficam pendentes: abra cada cobrança e consulte a rede novamente. O arquivo contém dados da operação; guarde-o em local privado.
+
+### Recursos oficiais para evolução
+
+O [catálogo do Crypto World’s Fair](https://colosseum.com/worldsfair/resources) foi revisado a partir do link enviado pela proponente. A [análise aplicada](docs/recursos-colosseum.md) distingue Phantom Connect, Surfpool, indexação e Squads de funcionalidades já integradas. Nenhuma carteira ou serviço externo foi contratado automaticamente.

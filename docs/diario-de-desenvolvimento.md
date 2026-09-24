@@ -58,3 +58,6 @@ Os commits intermediários preservam o andamento da pesquisa; apenas os recursos
 A pedido da proponente, o teste de pagamento foi adiado. Foram implementados servidor autenticado, persistência por conta, revisão transacional, histórico, cópias automáticas, produtores, lotes, etapas e rateios salvos. Frontend e backend permanecem separados em pastas no mesmo repositório para publicação conjunta. A página inicial apresenta o produto e encaminha à autenticação real da hospedagem. Não foi criado um formulário de senha fictício.
 
 A execução sofreu uma interrupção de limite da revisão automática de permissões; a migração bloqueada foi retomada e gerada depois. Nenhum bloqueio foi tratado como evidência de segurança do código. Testes de segurança e recuperação passaram; validação hospedada segue registrada no documento de validação.
+
+- Backend publicado com sucesso às 19:15 UTC; CI aprovado. Sem identidade pessoal, endpoints privados retornam 401. A seleção de conta no login real dependeu de autorização específica após bloqueio da revisão automática.
+- O catálogo oficial da Colosseum enviado pela proponente foi analisado em docs/recursos-colosseum.md. Phantom Connect, Surfpool, indexação e Squads permanecem opções avaliadas, não integrações anunciadas.
